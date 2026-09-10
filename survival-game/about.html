@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="STILL ALIVE, PROBABLY - 奇妙な世界を生き抜いて脱出するサバイバル探索ゲーム">
+  <title>ABOUT | STILL ALIVE, PROBABLY</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Yomogi&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #171611;
+      --paper: #e9dec1;
+      --paper-dark: #d5c7a5;
+      --ink: #28251e;
+      --muted: #625b4c;
+      --accent: #7c2f27;
+      --accent-dark: #55201b;
+      --line: rgba(61, 53, 39, 0.28);
+      --shadow: rgba(0, 0, 0, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255,255,255,0.03), transparent 24%),
+        radial-gradient(circle at 80% 75%, rgba(255,255,255,0.025), transparent 24%),
+        var(--bg);
+      font-family:
+        "Hiragino Kaku Gothic ProN",
+        "Yu Gothic",
+        "Meiryo",
+        sans-serif;
+      line-height: 1.85;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(920px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 42px 0 64px;
+    }
+
+    .hero {
+      text-align: center;
+      color: #efe7d1;
+      padding: 24px 14px 32px;
+    }
+
+    .hero-kicker {
+      margin: 0 0 8px;
+      font-size: 0.74rem;
+      letter-spacing: 0.26em;
+      opacity: 0.65;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.25rem, 7vw, 4.9rem);
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+      text-shadow: 0 4px 18px rgba(0,0,0,0.4);
+    }
+
+    .hero-probably {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 3px 12px 5px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1rem, 3.7vw, 1.55rem);
+      font-style: italic;
+      letter-spacing: 0.08em;
+      background: #d9caa8;
+      color: #29251c;
+      transform: rotate(-2deg);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.28);
+    }
+
+    /*
+      ロゴ画像を使う場合は、上の .hero-title / .hero-probably の代わりに
+      <img class="hero-logo" src="./images/your-logo.png" alt="STILL ALIVE, PROBABLY">
+      のように差し替えられます。
+    */
+    .hero-logo {
+      display: block;
+      width: min(680px, 94%);
+      height: auto;
+      margin: 0 auto;
+    }
+
+    .paper {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(255,255,255,0.08), rgba(0,0,0,0.025)),
+        var(--paper);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px;
+      box-shadow: 0 18px 46px var(--shadow);
+    }
+
+    .paper::before,
+    .paper::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      inset: 0;
+    }
+
+    .paper::before {
+      opacity: 0.14;
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          rgba(74, 61, 42, 0.08) 0px,
+          rgba(74, 61, 42, 0.08) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+    }
+
+    .paper::after {
+      box-shadow: inset 0 0 55px rgba(82, 67, 43, 0.17);
+    }
+
+    .paper-inner {
+      position: relative;
+      z-index: 1;
+      padding: clamp(28px, 6vw, 64px);
+    }
+
+    .story {
+      max-width: 650px;
+      margin: 0 auto;
+      text-align: center;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: clamp(1rem, 2.3vw, 1.1rem);
+    }
+
+    .story p {
+      margin: 0 0 1.45em;
+    }
+
+    .story .ending-title {
+      margin-top: 2.2em;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.25rem, 4vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+
+    .divider {
+      width: min(320px, 70%);
+      height: 1px;
+      margin: 46px auto;
+      background: linear-gradient(to right, transparent, var(--line), transparent);
+    }
+
+    .section-title {
+      margin: 0 0 28px;
+      text-align: center;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: clamp(1.5rem, 4vw, 2.15rem);
+      letter-spacing: 0.08em;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .action-card {
+      position: relative;
+      padding: 24px 20px 22px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.16);
+      box-shadow: 0 7px 16px rgba(67, 54, 34, 0.08);
+    }
+
+    .action-card h3 {
+      margin: 0 0 14px;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: 1.35rem;
+    }
+
+    .action-card p {
+      margin: 0 0 1em;
+      font-size: 0.95rem;
+    }
+
+    .action-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .flavor {
+      color: var(--muted);
+      font-family: "Yomogi", cursive;
+      font-style: normal;
+      font-size: 1.05rem;
+      line-height: 1.8;
+    }
+
+    .rules {
+      display: grid;
+      gap: 18px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .rule {
+      padding: 22px 24px;
+      border-left: 4px solid var(--accent);
+      background: rgba(255,255,255,0.13);
+    }
+
+    .rule h3 {
+      margin: 0 0 8px;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: 1.25rem;
+    }
+
+    .rule p {
+      margin: 0.45em 0 0;
+    }
+
+    .save-joke {
+      font-family: "Yomogi", cursive;
+      font-size: 1.15rem;
+      font-style: normal;
+      line-height: 1.8;
+    }
+
+    .closing {
+      margin: 46px 0 16px;
+      text-align: center;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: clamp(1.02rem, 2.5vw, 1.18rem);
+    }
+
+    .start-wrap {
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    .start-button {
+      display: inline-block;
+      min-width: min(320px, 100%);
+      padding: 15px 28px;
+      text-decoration: none;
+      color: #f6ecd5;
+      background: var(--accent);
+      border: 1px solid rgba(48, 20, 17, 0.75);
+      box-shadow:
+        0 5px 0 var(--accent-dark),
+        0 12px 18px rgba(0,0,0,0.18);
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .start-button:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 6px 0 var(--accent-dark),
+        0 14px 22px rgba(0,0,0,0.2);
+    }
+
+    .start-button:active {
+      transform: translateY(4px);
+      box-shadow:
+        0 1px 0 var(--accent-dark),
+        0 5px 10px rgba(0,0,0,0.17);
+    }
+
+    .footnote {
+      margin: 32px 0 0;
+      text-align: center;
+      color: rgba(239, 231, 209, 0.58);
+      font-size: 0.78rem;
+    }
+
+    strong {
+      font-weight: 700;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 18px, 920px);
+        padding-top: 24px;
+      }
+
+      .hero {
+        padding-top: 18px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .paper-inner {
+        padding: 30px 20px 38px;
+      }
+
+      .action-card,
+      .rule {
+        padding: 20px 18px;
+      }
+
+      .divider {
+        margin: 36px auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+
+    <header class="hero">
+      <p class="hero-kicker">A LITTLE SURVIVAL GAME</p>
+
+      <!-- ロゴ画像に差し替える場合は、以下2要素を削除して
+      <img class="hero-logo" src="./images/logo.png" alt="STILL ALIVE, PROBABLY">
+      などに変更してください。 -->
+      <h1 class="hero-title">STILL ALIVE</h1>
+      <div class="hero-probably">PROBABLY</div>
+    </header>
+
+    <article class="paper">
+      <div class="paper-inner">
+
+        <section class="story" aria-labelledby="story-heading">
+          <h2 id="story-heading" class="section-title">ABOUT</h2>
+
+          <p>昨日はベッドでちゃんと寝たはずなのに。</p>
+
+          <p>
+            目を覚ますと、そこは知らない場所だった。
+          </p>
+
+          <p>
+            見渡す限りの草原。<br>
+            少し離れたところには森や岩場。<br>
+            見覚えのない植物に、妙な生き物。
+          </p>
+
+          <p>いったい、何が起こっているのだろう。</p>
+
+          <p>
+            どうしてここにいるのか。<br>
+            ここがどこなのか。<br>
+            そもそも、どうやって来たのか。
+          </p>
+
+          <p>何ひとつ思い出せない。</p>
+
+          <p>もしかして、自分は死んでしまったのだろうか。</p>
+
+          <p>……いや。</p>
+
+          <p>たぶん、まだ生きている。</p>
+
+          <p>少なくとも、このまま何もしなければお腹が空く。</p>
+
+          <p>
+            食べられそうなものを探して、<br>
+            使えそうなものを拾って、<br>
+            夜を越せる場所を作る。
+          </p>
+
+          <p>
+            そして、この世界のどこかには、<br>
+            ここから出るための何かがあると思う。
+          </p>
+
+          <p>
+            たぶん。<br>
+            たぶんね。
+          </p>
+
+          <p class="ending-title">STILL ALIVE... PROBABLY</p>
+        </section>
+
+        <div class="divider"></div>
+
+        <section aria-labelledby="actions-heading">
+          <h2 id="actions-heading" class="section-title">まずは、これだけ。</h2>
+
+          <div class="actions">
+            <section class="action-card">
+              <h3>探索する</h3>
+              <p>
+                「探索する」ボタンから、周囲の世界を探索できます。
+              </p>
+              <p>
+                探索すると木材や石材、食糧などの資源を手に入れることができます。
+              </p>
+              <p>
+                ただし、探索するたびに<strong>1日が経過して空腹度が減少</strong>します。
+                さらに、危険な場所では<strong>ライフが減ることもあります</strong>。
+              </p>
+              <p class="flavor">
+                遠くまで行きたい気持ちは分かるけど、帰れなくなったら困るものね。
+              </p>
+            </section>
+
+            <section class="action-card">
+              <h3>食べる</h3>
+              <p>
+                「食べる」ボタンから食事ができます。
+              </p>
+              <p>
+                <strong>食糧を1消費して、空腹度を回復</strong>します。
+              </p>
+              <p>
+                回復量は拠点にある<strong>食堂のレベル</strong>によって増えていきます。
+              </p>
+              <p class="flavor">
+                最高の調味料は空腹、っていうじゃない。
+              </p>
+            </section>
+
+            <section class="action-card">
+              <h3>作る</h3>
+              <p>
+                拠点の下にあるボタンから、施設や装備を作ることができます。
+              </p>
+              <p>
+                探索で集めた<strong>木材や石材などの資源を消費</strong>して、拠点を発展させましょう。
+              </p>
+              <p>
+                食事を楽にしたり、探索を安全にしたり、できることも少しずつ増えていきます。
+              </p>
+              <p class="flavor">
+                せっかく住むなら、少しくらい快適な方がいいよね。
+              </p>
+            </section>
+          </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <section aria-labelledby="rules-heading">
+          <h2 id="rules-heading" class="section-title">そのほか</h2>
+
+          <div class="rules">
+            <section class="rule">
+              <h3>ゲームの目的</h3>
+              <p>
+                この世界を生き抜いて、脱出することが目的です。
+              </p>
+              <p>
+                どこかに、ここから出るための手がかりがあるかもしれません。
+              </p>
+            </section>
+
+            <section class="rule">
+              <h3>ゲームオーバー</h3>
+              <p>
+                <strong>ライフが0になるとゲームオーバー</strong>です。
+              </p>
+              <p>
+                お腹が空きすぎるとライフも減ってしまうので注意しましょう。
+              </p>
+              <p class="flavor">
+                腹が減っては探索もできない、っていうしね。
+              </p>
+            </section>
+
+            <section class="rule">
+              <h3>セーブについて</h3>
+              <p class="save-joke">せーぶ？</p>
+              <p class="save-joke">何を抑えることかな？</p>
+            </section>
+          </div>
+        </section>
+
+        <p class="closing">
+          あとは、やってみればだいたい分かります。<br>
+          たぶん。
+        </p>
+
+        <div class="start-wrap">
+          <!-- ゲーム本体が index.html の場合、このままでOKです -->
+          <a class="start-button" href="./index.html">GAME START</a>
+        </div>
+
+      </div>
+    </article>
+
+    <p class="footnote">STILL ALIVE, PROBABLY</p>
+
+  </main>
+</body>
+</html>
