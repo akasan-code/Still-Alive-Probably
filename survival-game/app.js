@@ -1,0 +1,4725 @@
+'use strict';
+
+
+/* =========================================================
+   基本ユーティリティ
+========================================================= */
+
+const $ = id => document.getElementById(id);
+
+const K = (q, r) => `${q},${r}`;
+
+const D = (a, b) =>
+  Math.max(
+    Math.abs(a.q - b.q),
+    Math.abs(a.r - b.r),
+    Math.abs((a.q + a.r) - (b.q + b.r))
+  );
+
+const R = (a, b) =>
+  Math.floor(Math.random() * (b - a + 1)) + a;
+
+
+/* =========================================================
+   マップ設定
+========================================================= */
+
+const MAP_RADIUS = 15;
+
+const BASE_POS = {
+  q: 0,
+  r: 0
+};
+
+
+/* =========================================================
+   ゲーム状態
+========================================================= */
+
+const S = {
+  log: [],
+
+  day: 1,
+
+  hunger: 100,
+  maxHunger: 100,
+
+  life: 100,
+  maxLife: 100,
+
+  food: 0,
+  grass: 0,
+  wood: 0,
+  stone: 0,
+  fur: 0,
+  red: 0,
+  blue: 0,
+  yellow: 0,
+
+  // 黄色い宝石を一度でも入手すると解放
+  specialFacilityUnlocked: false,
+
+  fac: {
+    base: 0,
+    kitchen: 0,
+    weapon: 0,
+    armor: 0
+  },
+
+  compass: false,
+
+  base: {
+    q: BASE_POS.q,
+    r: BASE_POS.r
+  },
+
+  // 主人公は拠点に固定
+  pos: {
+    q: BASE_POS.q,
+    r: BASE_POS.r
+  },
+
+  tiles: new Map(),
+
+  book: {},
+
+  special: {
+    forest: null,
+    pond: null,
+    rock: null,
+    cave: null
+  },
+
+  gate: null,
+
+  // ゲートを一度探索したか
+  gateDiscovered: false,
+
+  // 初回確定報酬の黄色宝石を受け取ったか
+  gateRewardClaimed: false,
+
+  // コンパスでゲートを起動したか
+  gateActivated: false,
+
+  pending: null,
+
+  isExploring: false,
+
+  // 探索画面を初めて開いたか
+  mapInitialized: false
+};
+
+
+/* =========================================================
+   地形
+========================================================= */
+
+const T = {
+  grass: {
+    name: '草原',
+    icon: '🌿',
+    food: [1, 2],
+    grass: [1, 2],
+    damage: 0,
+    rare: ['食料', 3]
+  },
+
+  forest: {
+    name: '森',
+    icon: '🌲',
+    wood: [2, 4],
+    damage: 5,
+    rare: ['毛皮', 1]
+  },
+
+  rock: {
+    name: '岩場',
+    icon: '⛰️',
+    stone: [2, 4],
+    damage: 5,
+    rare: ['赤い宝石', 1]
+  },
+
+  pond: {
+    name: '池',
+    icon: '💧',
+    food: [2, 4],
+    damage: 5,
+    rare: ['青い宝石', 1]
+  },
+
+  cave: {
+    name: '洞窟',
+    icon: '🕳️',
+    red: [1, 1],
+    blue: [1, 1],
+    damage: 20,
+    rare: ['黄色い宝石', 1]
+  },
+
+  waste: {
+    name: '荒地',
+    icon: '🏜️',
+    damage: 0,
+    rare: ['食料', 2]
+  },
+
+  gate: {
+    name: 'ゲート',
+    icon: '🌀',
+    damage: 0,
+    rare: ['黄色い宝石', 1]
+  },
+
+};
+
+/* =========================================================
+   マップ地形画像
+========================================================= */
+
+const TERRAIN_IMAGES = {
+
+  grass: [
+    'images/map/grass_1.png',
+    'images/map/grass_2.png',
+    'images/map/grass_3.png',
+    'images/map/grass_4.png'
+  ],
+
+  forest: [
+    'images/map/forest_1.png',
+    'images/map/forest_2.png'
+  ],
+
+  rock: [
+    'images/map/rock_1.png',
+    'images/map/rock_2.png',
+    'images/map/rock_3.png',
+    'images/map/rock_4.png'
+  ],
+
+  pond: [
+    'images/map/pond_1.png',
+    'images/map/pond_2.png',
+    'images/map/pond_3.png',
+    'images/map/pond_4.png'
+  ],
+
+  cave: [
+    'images/map/cave_1.png',
+    'images/map/cave_2.png',
+    'images/map/cave_3.png',
+    'images/map/cave_4.png'
+  ],
+
+  waste: [
+    'images/map/waste_1.png',
+    'images/map/waste_2.png',
+    'images/map/waste_3.png',
+    'images/map/waste_4.png'
+  ],
+
+  gate: [
+    'images/map/gate.png'
+  ]  
+
+};
+
+/* =========================================================
+   キャラクターアニメーション
+========================================================= */
+const CHARACTER_ANIMATIONS = {
+
+  idle: {
+    frames: [
+      'images/character_idle1.png',
+      'images/character_idle2.png',
+      'images/character_idle3.png',
+      'images/character_idle5.png',
+      'images/character_idle4.png',
+    ],
+
+    // 各フレームの表示時間
+    durations: [
+      6000,  // 1枚目：じっとする
+      450,   // 2枚目
+      450,   // 3枚目
+      8000,  // 5枚目：じっとする
+      800,   // 4枚目：斜め上をみる
+    ]
+  },
+
+  walk: {
+    frames: [
+      'images/character_walk1.png',
+      'images/character_walk2.png',
+      'images/character_walk3.png',
+      'images/character_walk4.png',
+      'images/character_walk5.png'
+    ],
+
+    durations: [
+      300,
+      300,
+      300,
+      300,
+      300
+    ]
+  },
+
+  discover: {
+    // 専用差分ができるまでは待機画像を使用
+    frames: [
+      'images/character_idle1.png'
+    ],
+
+    durations: [
+      550
+    ]
+  }
+
+};
+
+
+/* =========================================================
+   探索背景
+========================================================= */
+
+const EXPLORATION_BACKGROUNDS = {
+  grass: 'images/bg/explore_grass.png',
+  forest: 'images/bg/explore_forest.png',
+  pond: 'images/bg/explore_pond.png',
+  rock: 'images/bg/explore_rock.png',
+
+  // 専用背景がない地形は草原へフォールバック
+  cave: 'images/bg/explore_grass.png',
+  waste: 'images/bg/explore_grass.png',
+
+  gate: 'images/bg/explore_gate.png'
+};
+
+/* =========================================================
+   ゲートイベント画像
+========================================================= */
+const GATE_CUT_IMAGES = [
+  'images/events/gate_cut_1.png',
+  // 追加：主人公カット
+  'images/events/gate_cut_character1.png',
+  'images/events/gate_cut_2.png',
+  'images/events/gate_cut_3.png',
+  'images/events/gate_cut_4.png',
+  'images/events/gate_cut_5.png',
+  'images/events/gate_cut_6.png'
+];
+
+const ENDING_CUT_IMAGES = [
+  'images/events/ending_cut_1.png',
+  'images/events/ending_cut_2.png',
+  'images/events/ending_cut_3.png',
+  'images/events/ending_cut_4.png'
+];
+
+let characterAnimationTimer = null;
+let currentGateCut = 0;
+let gateCutInputLocked = false;
+let gateCutHasCompass = false;
+let gateCutResolve = null;
+let gateCutTextTimer = null;
+let gateCutAutoTimer = null;
+/* =========================================================
+   キャラクターアニメーション開始
+========================================================= */
+
+function startCharacterAnimation(type) {
+
+  const char = $('char');
+
+  if (!char) {
+    return;
+  }
+
+  const animation =
+    CHARACTER_ANIMATIONS[type];
+
+  if (!animation) {
+    return;
+  }
+
+
+  /*
+   * 既存アニメーション停止
+   */
+
+  stopCharacterAnimation();
+
+
+  let frame = 0;
+
+
+  /*
+   * 最初のフレーム
+   */
+
+  char.src =
+    animation.frames[frame];
+
+
+  /*
+   * 次のフレームへ進む
+   */
+
+  function nextFrame() {
+
+    frame++;
+
+    if (frame >= animation.frames.length) {
+      frame = 0;
+    }
+
+
+    char.src =
+      animation.frames[frame];
+
+
+    /*
+     * 次のフレームまでの時間
+     */
+
+    characterAnimationTimer =
+      setTimeout(
+        nextFrame,
+        animation.durations[frame]
+      );
+  }
+
+
+  /*
+   * 1枚目の表示時間
+   */
+
+  characterAnimationTimer =
+    setTimeout(
+      nextFrame,
+      animation.durations[frame]
+    );
+}
+
+
+/* =========================================================
+   キャラクターアニメーション停止
+========================================================= */
+
+function stopCharacterAnimation() {
+
+  if (characterAnimationTimer) {
+
+    clearTimeout(
+      characterAnimationTimer
+    );
+
+    characterAnimationTimer = null;
+  }
+}
+
+/* =========================================================
+   食材図鑑マスタ
+========================================================= */
+const FOOD_MASTER = [
+
+  {
+    id: 'butterfly_berry',
+    name: '蝶ベリー',
+    image: 'images/foods/butterfly_berry.png',
+    background: 'images/foods/flame.png',
+    terrain: 'grass',
+    flavor: '蝶みたいに綺麗なベリー……おいしそうね',
+    weight: 70
+  },
+  {
+    id: 'bolt_mushroom',
+    name: '稲妻キノコ',
+    image: 'images/foods/bolt_mushroom.png',
+    background: 'images/foods/flame.png',
+    terrain: 'grass',
+    flavor: '食べるとビリビリするけど、毒じゃないよ……ね？',
+    weight: 15
+  },
+  {
+    id: 'bread_grass',
+    name: '小麦パン',
+    image: 'images/foods/bread_grass.png',
+    background: 'images/foods/flame.png',
+    terrain: 'grass',
+    flavor: '採れたてって、焼きたてと同じ意味だったのね',
+    weight: 5
+  },
+  {
+    id: 'bunny_chicken',
+    name: 'ウサニワトリ',
+    image: 'images/foods/bunny_chicken.png',
+    background: 'images/foods/flame.png',
+    terrain: 'grass',
+    flavor: 'これはトリ肉……ウサギ肉……どっちになるのかしら？',
+    weight: 5
+  },
+  {
+    id: 'honey_gummi',
+    name: 'ハニーグミ',
+    image: 'images/foods/honey_gummi.png',
+    background: 'images/foods/flame.png',
+    terrain: 'grass',
+    flavor: 'この世界でグミが食べられるなんて、思わなかったわ',
+    weight: 3
+  },
+  {
+    id: 'moon_apple',
+    name: '月見リンゴ',
+    image: 'images/foods/moon_apple.png',
+    background: 'images/foods/flame.png',
+    terrain: 'grass',
+    flavor: '月って、こんな味なのかしら',
+    weight: 2
+  },
+
+  {
+    id: 'bottle_fish',
+    name: '瓶詰め魚',
+    image: 'images/foods/bottle_fish.png',
+    background: 'images/foods/flame.png',
+    terrain: 'pond',
+    flavor: 'よかった……私、魚は触れなかったの',
+    weight: 50
+  },
+  {
+    id: 'egg',
+    name: '何かのタマゴ',
+    image: 'images/foods/egg.png',
+    background: 'images/foods/flame.png',
+    terrain: 'pond',
+    flavor: '…… 生まれる前に食べないとね',
+    weight: 30
+  },
+  {
+    id: 'vegetable_ice',
+    name: 'ベジタブルアイス',
+    image: 'images/foods/vegetable_ice.png',
+    background: 'images/foods/flame.png',
+    terrain: 'pond',
+    flavor: 'なんだか得した気分♪',
+    weight: 20
+  },
+
+];
+
+const FOOD_TERRAIN_NAMES = {
+  grass: '草原',
+  forest: '森',
+  rock: '岩場',
+  pond: '池',
+  cave: '洞窟',
+  waste: '荒地'
+};
+
+/* =========================================================
+   食材発見率
+========================================================= */
+const FOOD_DISCOVERY_RATE = {
+
+  grass: 0.35,
+  forest: 0.35,
+  rock: 0.35,
+  pond: 0.60,
+  cave: 0.35,
+  waste: 0.35
+
+};
+
+/* =========================================================
+   食材 weight 抽選
+========================================================= */
+function pickWeightedFood(foods) {
+
+  if (!foods.length) {
+    return null;
+  }
+
+  const totalWeight = foods.reduce((sum, food) => sum + food.weight, 0);
+
+  let roll = Math.random() * totalWeight;
+
+  for (const food of foods) {
+    roll -= food.weight;
+    if (roll < 0) {
+      return food;
+    }
+  }
+
+  return foods[foods.length - 1];
+}
+
+/* =========================================================
+   トースト
+========================================================= */
+
+function toast(message) {
+  const e = $('toast');
+
+  if (!e) {
+    return;
+  }
+
+  e.textContent = message;
+  e.classList.add('show');
+
+  setTimeout(() => {
+    e.classList.remove('show');
+  }, 1500);
+}
+
+
+/* =========================================================
+   モーダル
+========================================================= */
+
+function showModal(id) {
+  const e = $(id);
+
+  if (!e) {
+    return;
+  }
+
+  e.hidden = false;
+  e.classList.add('show');
+}
+
+
+function closeModal(id) {
+  const e = $(id);
+
+  if (!e) {
+    return;
+  }
+
+  e.classList.remove('show');
+  e.hidden = true;
+}
+
+
+/* =========================================================
+   画面切り替え
+========================================================= */
+
+function showBaseView() {
+  $('baseView').hidden = false;
+  $('exploreView').hidden = true;
+  $('exploreSign').hidden = false;
+
+  $('exploreView').classList.remove('active');
+  $('baseView').classList.add('active');
+}
+
+
+function showExploreView() {
+  $('baseView').hidden = true;
+  $('exploreView').hidden = false;
+  $('exploreSign').hidden = true;
+  
+  $('baseView').classList.remove('active');
+  $('exploreView').classList.add('active');
+
+  renderMap();
+}
+
+
+/* =========================================================
+   ゲート生成
+========================================================= */
+
+function generateGate() {
+
+  while (true) {
+
+    const q = R(-MAP_RADIUS, MAP_RADIUS);
+    const r = R(-MAP_RADIUS, MAP_RADIUS);
+
+    const distance = D(
+      { q, r },
+      S.base
+    );
+
+    /*
+     * 拠点から7～9マス
+     */
+    if (
+      distance < 7 ||
+      distance > 9
+    ) {
+      continue;
+    }
+
+    const tile = S.tiles.get(
+      K(q, r)
+    );
+
+    /*
+     * 特殊地形には置かない
+     */
+    if (
+      !tile ||
+      tile.t !== 'grass'
+    ) {
+      continue;
+    }
+
+    S.gate = {
+      q,
+      r
+    };
+
+    /*
+    * 選ばれたマスをゲート地形に変更
+    */
+    tile.t = 'gate';
+    tile.special = true;
+    /*
+    * ゲート画像は1種類なのでindexは0で固定　*/
+    tile.imageIndex = 0;
+
+    return;
+  }
+}
+
+/* =========================================================
+   拠点からゲートへの方向
+========================================================= */
+function getGateDirectionAngle() {
+
+  /*
+   * ゲート未生成
+   */
+  if (!S.gate) {
+    return 0;
+  }
+
+
+  /*
+   * 拠点から見たゲートのHEX座標差
+   */
+  const dq =
+    S.gate.q - S.base.q;
+
+  const dr =
+    S.gate.r - S.base.r;
+
+
+  /*
+   * renderMap() と同じ座標計算で
+   * 画面上の方向へ変換
+   */
+  const dx =
+    dq * 84;
+
+  const dy =
+    dr * 108 +
+    dq * 54;
+
+
+  /*
+   * atan2 で角度を取得
+   *
+   * 右方向 = 0度
+   * 下方向 = 90度
+   * 左方向 = 180度
+   * 上方向 = -90度
+   */
+  const angle =
+    Math.atan2(dy, dx) *
+    180 /
+    Math.PI;
+
+
+  return angle;
+}
+
+/* マップの外縁を作る　*/
+function generateDarkTiles() {
+
+  for (const tile of S.tiles.values()) {
+    /*
+     * 拠点からの距離
+     */
+    const distance = D(
+      tile,
+      S.base
+    );
+
+
+    /*
+     * 距離10未満は暗闇にしない
+     */
+    if (distance < 10) {
+      continue;
+    }
+
+
+    /*
+     * ゲートは暗闇にしない
+     */
+    if (tile.t === 'gate') {
+      continue;
+    }
+
+
+    /*
+     * 外側ほど暗闇になりやすくする
+     */
+    let darkChance = 0;
+
+    if (distance === 10) {
+      darkChance = 0.40;
+    }
+
+    else if (distance === 11) {
+      darkChance = 0.50;
+    }
+
+    else if (distance === 12) {
+      darkChance = 0.70;
+    }
+
+    else if (distance === 13) {
+      darkChance = 0.90;
+    }
+
+    else {
+      darkChance = 1.00;
+    }
+
+
+    /*
+     * 暗闇化
+     */
+    if (
+      Math.random() < darkChance
+    ) {
+      tile.isDark = true;
+    }
+
+  }
+
+}
+
+/* =========================================================
+   初期化
+========================================================= */
+
+function init() {
+  S.day = 1;
+
+  S.hunger = 100;
+  S.maxHunger = 100;
+
+  S.life = 100;
+  S.maxLife = 100;
+
+  S.food = 0;
+  S.grass = 0;
+  S.wood = 0;
+  S.stone = 0;
+  S.fur = 0;
+  S.red = 0;
+  S.blue = 0;
+  S.yellow = 0;
+
+  S.specialFacilityUnlocked = false;
+
+  S.fac = {
+    base: 0,
+    kitchen: 0,
+    weapon: 0,
+    armor: 0
+  };
+
+  S.compass = false;
+
+  S.base = {
+    q: 0,
+    r: 0
+  };
+
+  S.pos = {
+    q: 0,
+    r: 0
+  };
+
+  S.tiles = new Map();
+
+  S.book = {};
+
+  S.special = {
+    forest: null,
+    pond: null,
+    rock: null,
+    cave: null
+  };
+
+  S.gate = null;
+  S.gateDiscovered = false;
+  S.gateRewardClaimed = false;
+  S.gateActivated = false;
+
+  S.pending = null;
+  S.isExploring = false;
+  S.log = [];
+  S.mapInitialized = false;
+
+
+  /*
+   * マップ全体を生成
+   */
+  for (let q = -MAP_RADIUS; q <= MAP_RADIUS; q++) {
+    for (let r = -MAP_RADIUS; r <= MAP_RADIUS; r++) {
+      if ( D({ q, r }, S.base) > MAP_RADIUS ) {
+        continue;
+      }
+
+      gen(q, r);
+    }
+  }
+
+  /* 特殊地形を配置 */
+  generateSpecialTerrains();
+
+  /* ゲート位置決定 */
+  generateGate();
+
+ /* マップの外縁を決定 */
+  generateDarkTiles();
+
+  /*
+   * 拠点を探索済みにする
+   */
+  const baseTile = S.tiles.get(
+    K(S.base.q, S.base.r)
+  );
+
+  if (baseTile) {
+    baseTile.seen = true;
+  }
+
+}
+
+
+/* =========================================================
+   マップ生成
+========================================================= */
+
+/* =========================================================
+   基本マップ生成
+========================================================= */
+
+function gen(q, r) {
+
+  const k = K(q, r);
+
+  if (S.tiles.has(k)) {
+    return S.tiles.get(k);
+  }
+
+
+  /*
+   * 拠点
+   */
+  if (
+    q === S.base.q &&
+    r === S.base.r
+  ) {
+    const baseImages = TERRAIN_IMAGES.grass || [];
+
+    const baseTile = {
+      q,
+      r,
+      t: 'grass',
+      seen: true,
+      isDark: false,
+      imageIndex:
+        baseImages.length > 0
+          ? R(0, baseImages.length - 1)
+          : 0
+    };
+
+    S.tiles.set(k, baseTile);
+
+    return baseTile;
+
+  }
+
+
+  const distance = D(
+    { q, r },
+    S.base
+  );
+
+
+  /*
+   * 基本は草原
+   */
+  let t = 'grass';
+
+
+  /*
+   * 荒地
+   */
+  if (
+    Math.random() < 0.12
+  ) {
+    t = 'waste';
+  }
+
+  // マップイラストを1つ選ぶ
+  const terrainImages = TERRAIN_IMAGES[t] || [];
+  const imageIndex = terrainImages.length > 0 ? R(0, terrainImages.length - 1) : 0;
+
+  const tile = {
+    q,
+    r,
+    t,
+    seen: false,
+    isDark: false,
+    imageIndex
+  };
+
+  S.tiles.set(k, tile);
+
+  return tile;
+}
+
+/* =========================================================
+   特殊地形配置
+========================================================= */
+
+/*
+ * 配置可能なマスを取得
+ */
+function getSpecialCandidates(
+  minDistance,
+  maxDistance
+) {
+
+  const candidates = [];
+
+  for (const tile of S.tiles.values()) {
+
+    const distance = D(
+      tile,
+      S.base
+    );
+
+    /*
+     * 距離範囲
+     */
+    if (
+      distance < minDistance ||
+      distance > maxDistance
+    ) {
+      continue;
+    }
+
+    /*
+     * 草原だけを対象
+     */
+    if (tile.t !== 'grass' && tile.t !== 'waste') {
+      continue;
+    }
+
+    /*
+     * 既に特殊地形が置かれている
+     */
+    if (
+      tile.special
+    ) {
+      continue;
+    }
+
+    candidates.push(tile);
+  }
+
+  return candidates;
+}
+
+/* =========================================================
+   4マス特殊地形
+========================================================= */
+
+function placeCluster(
+  terrain,
+  minDistance,
+  maxDistance
+) {
+
+  const candidates =
+    getSpecialCandidates(
+      minDistance,
+      maxDistance
+    );
+
+
+  /*
+   * 候補をランダムに並べる
+   */
+  candidates.sort(
+    () => Math.random() - 0.5
+  );
+
+
+  for (const center of candidates) {
+
+    /*
+     * 中心マス
+     */
+    const cluster = [
+      center
+    ];
+
+
+    /*
+     * 中心に隣接するマスを探す
+     */
+    const neighbors =
+      candidates
+        .filter(tile =>
+          D(tile, center) === 1
+        )
+        .sort(
+          () => Math.random() - 0.5
+        );
+
+
+    /*
+     * 4マスになるまで追加
+     */
+    for (
+      const tile of neighbors
+    ) {
+
+      if (
+        cluster.length >= 4
+      ) {
+        break;
+      }
+
+      cluster.push(tile);
+    }
+
+
+    /*
+     * 4マス揃わなければ
+     * 別の中心を試す
+     */
+    if (
+      cluster.length < 4
+    ) {
+      continue;
+    }
+
+
+    /*
+     * 配置
+     */
+    cluster.forEach(tile => {
+
+      tile.t = terrain;
+      tile.special = true;
+
+    });
+
+
+    return true;
+  }
+
+
+  return false;
+}
+
+/* =========================================================
+   1マス特殊地形
+========================================================= */
+
+function placeSingle(
+  terrain,
+  minDistance,
+  maxDistance
+) {
+
+  const candidates =
+    getSpecialCandidates(
+      minDistance,
+      maxDistance
+    );
+
+
+  if (
+    candidates.length === 0
+  ) {
+    return false;
+  }
+
+
+  const tile =
+    candidates[
+      R(
+        0,
+        candidates.length - 1
+      )
+    ];
+
+
+  tile.t = terrain;
+  tile.special = true;
+
+  return true;
+}
+
+/* =========================================================
+   特殊地形を指定数だけ配置
+========================================================= */
+
+function placeSpecialRepeated(
+  placer,
+  terrain,
+  count,
+  minDistance,
+  maxDistance,
+  maxAttempts = 50
+) {
+
+  let placed = 0;
+  let attempts = 0;
+
+  while (
+    placed < count &&
+    attempts < maxAttempts
+  ) {
+
+    const success =
+      placer(
+        terrain,
+        minDistance,
+        maxDistance
+      );
+
+    if (success) {
+      placed++;
+    }
+
+    attempts++;
+  }
+
+  if (placed < count) {
+    console.warn(
+      `${terrain} の生成数が不足しています。` +
+      `予定: ${count} / 実際: ${placed}`
+    );
+  }
+}
+
+/* =========================================================
+   特殊地形を配置
+========================================================= */
+
+function generateSpecialTerrains() {
+
+  /*
+   * 森
+   * 4マスセット × 2箇所
+   * 拠点から2～4マス
+   */
+  placeSpecialRepeated(
+    placeCluster,
+    'forest',
+    2,
+    2,
+    4
+  );
+
+
+  /*
+   * 岩場
+   * 4マスセット × 2箇所
+   * 拠点から3～5マス
+   */
+  placeSpecialRepeated(
+    placeCluster,
+    'rock',
+    2,
+    3,
+    5
+  );
+
+
+  /*
+   * 池
+   * 1マス × 4箇所
+   * 拠点から3～6マス
+   */
+  placeSpecialRepeated(
+    placeSingle,
+    'pond',
+    4,
+    3,
+    6
+  );
+
+
+  /*
+   * 洞窟
+   * 1マス × 4箇所
+   * 拠点から4～6マス
+   */
+  placeSpecialRepeated(
+    placeSingle,
+    'cave',
+    4,
+    4,
+    6
+  );
+}
+
+/* =========================================================
+   探索可能マス判定
+========================================================= */
+
+function isAdjacentToExplored(tile) {
+  for (const explored of S.tiles.values()) {
+    if (!explored.seen) {
+      continue;
+    }
+
+    if (
+      D(tile, explored) === 1
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+/* =========================================================
+   描画
+========================================================= */
+
+function render() {
+  $('log').innerHTML =
+    (S.log || [])
+      .slice(0, 6)
+      .map(
+        x => `<div class="log-item">${x}</div>`
+      )
+      .join('');
+
+
+  $('day').textContent = S.day;
+
+  $('food').textContent = S.food;
+
+  $('hungerText').textContent =
+    `${S.hunger} / ${S.maxHunger}`;
+
+  $('lifeText').textContent =
+    `${S.life} / ${S.maxLife}`;
+
+
+  $('hungerBar').style.width =
+    `${S.hunger / S.maxHunger * 100}%`;
+
+  $('lifeBar').style.width =
+    `${Math.max(0, S.life) / S.maxLife * 100}%`;
+
+
+  $('resources').innerHTML = `
+    <div class="resource-item">
+      <img src="images/UI/materials_grass.png" alt="草">
+      <span>${S.grass}</span>
+    </div>
+
+    <div class="resource-item">
+      <img src="images/UI/materials_wood.png" alt="木材">
+      <span>${S.wood}</span>
+    </div>
+
+    <div class="resource-item">
+      <img src="images/UI/materials_stone.png" alt="石材">
+      <span>${S.stone}</span>
+    </div>
+
+    <div class="resource-item">
+      <img src="images/UI/materials_fur.png" alt="毛皮">
+      <span>${S.fur}</span>
+    </div>
+
+    <div class="resource-item">
+      <img src="images/UI/materials_gem_red.png" alt="赤い宝石">
+      <span>${S.red}</span>
+    </div>
+
+    <div class="resource-item">
+      <img src="images/UI/materials_gem_blue.png" alt="青い宝石">
+      <span>${S.blue}</span>
+    </div>
+
+    <div class="resource-item">
+      <img src="images/UI/materials_gem_yellow.png" alt="黄色い宝石">
+      <span>${S.yellow}</span>
+    </div>
+  `;
+
+  renderFacilities();
+  renderBook();
+}
+
+
+/* =========================================================
+   マップ描画
+========================================================= */
+
+function renderMap() {
+  const map = $('map');
+
+  if (!map) {
+    return;
+  }
+
+
+  /*
+   * 現在のスクロール位置
+   */
+  const oldScrollLeft = map.scrollLeft;
+  const oldScrollTop = map.scrollTop;
+
+  const hadScroll =
+    S.mapInitialized;
+
+
+  /*
+   * マップ全体
+   */
+  const centerX = 1800;
+  const centerY = 1800;
+
+  const mapWidth = 3600;
+  const mapHeight = 3600;
+
+
+  map.innerHTML = '';
+
+
+  const world = document.createElement('div');
+
+  world.className = 'hex-world';
+  world.style.position = 'relative';
+  world.style.width = `${mapWidth}px`;
+  world.style.height = `${mapHeight}px`;
+  map.appendChild(world);
+
+  /*
+   * マップ描画
+   */
+  for (
+    let q = -MAP_RADIUS;
+    q <= MAP_RADIUS;
+    q++
+  ) {
+    for (
+      let r = -MAP_RADIUS;
+      r <= MAP_RADIUS;
+      r++
+    ) {
+      if (
+        D(
+          { q, r },
+          S.base
+        ) > MAP_RADIUS
+      ) {
+        continue;
+      }
+
+      const tile =
+        S.tiles.get(
+          K(q, r)
+        );
+
+      if (!tile) {
+        continue;
+      }
+
+
+      const isBase =
+        q === S.base.q &&
+        r === S.base.r;
+
+      const isAvailable =
+        !isBase &&
+        !tile.seen &&
+        !tile.isDark &&
+        isAdjacentToExplored(tile);
+
+      const isDarkRevealed =
+        tile.isDark &&
+        isAdjacentToExplored(tile);
+
+      const isgate =
+        tile.t === 'gate' &&
+        (
+          tile.seen ||
+          isAvailable
+        );
+
+      const x =
+        centerX +
+        q * 84;
+
+      const y =
+        centerY +
+        r * 108 +
+        q * 54;
+
+
+      const e =
+        document.createElement('div');
+
+
+      /*
+       * クラス
+       */
+      e.className =
+        'hex ' +
+        (
+          tile.seen
+            ? `explored ${tile.t}`
+            : 'unexplored'
+        );
+
+
+      if (isBase) {
+        e.classList.add('base');
+      }
+
+
+      if (isAvailable) {
+        e.classList.add('available');
+      }
+
+      if (isDarkRevealed) {
+        e.classList.add('dark');
+      }
+
+      if (isgate) {
+        e.dataset.gate = 'true';
+      }
+
+
+      /*
+       * 位置
+       */
+      e.style.left =
+        `${x - 43}px`;
+
+      e.style.top =
+        `${y - 49}px`;
+
+
+      /* =====================================================
+        マス表示
+      ===================================================== */
+
+      let content = '';
+
+
+      /*
+      * 拠点
+      */
+      if (isBase) {
+        // コンパスを持っていたら拠点に矢印を表示する
+        const gateAngle = getGateDirectionAngle();
+
+        content = `
+          <div class="inside">
+
+            ${
+              S.compass
+                ? `
+                  <img
+                    class="gate-direction-arrow"
+                    src="images/UI/gate_arrow.png"
+                    alt="ゲートの方向"
+                    style="transform: rotate(${gateAngle}deg);"
+                  >
+                `
+                : `
+                  <div class="terrain-icon">
+                    🏕️
+                  </div>
+                `
+            }
+
+            <div>
+              拠点
+            </div>
+
+          </div>
+        `;
+
+      }
+      else if (isDarkRevealed) {
+        content = '';
+      }
+
+      /*
+      * 探索済み
+      * または
+      * 次に探索可能な未探索マス
+      */
+      else if (
+        tile.seen ||
+        isAvailable
+      ) {
+
+        const terrainImages = TERRAIN_IMAGES[tile.t] || [];
+        const safeImageIndex =
+          terrainImages.length > 0
+            ? (tile.imageIndex || 0) % terrainImages.length
+            : 0;
+
+        const terrainImage =
+          terrainImages[safeImageIndex];
+
+        content = `
+          <div class="terrain-layer">
+
+            ${terrainImage ? `
+               <img src="${terrainImage}" alt="${T[tile.t].name}" onerror="this.style.display='none';">
+                `
+                : ''
+            }
+          </div>
+          <div class="inside terrain-label">${T[tile.t].name}</div>
+        `;
+      }
+
+
+      /*
+      * まだ探索できない未探索マス
+      */
+      else {
+        e.classList.add('blocked');
+
+        content = `
+          <div class="fog-layer"></div>
+        `;
+      }
+      // html描写
+      e.innerHTML = content;
+
+      /*
+       * 探索可能マス
+       */
+      if (isAvailable) {
+        e.addEventListener(
+          'click',
+          () => openExplore(tile)
+        );
+      }
+      else if (
+        S.gateDiscovered &&
+        !S.gateActivated &&
+        tile.t === 'gate'
+      ) {
+        e.style.cursor = 'pointer';
+
+        e.addEventListener(
+          'click',
+          () => openGateControl(tile)
+        );
+      }
+
+
+      world.appendChild(e);
+    }
+  }
+
+
+  /*
+   * 初回だけ拠点を中央表示
+   */
+  requestAnimationFrame(() => {
+    if (!hadScroll) {
+      map.scrollLeft =
+        centerX -
+        map.clientWidth / 2;
+
+      map.scrollTop =
+        centerY -
+        map.clientHeight / 2;
+
+      S.mapInitialized = true;
+    }
+
+    else {
+      map.scrollLeft =
+        oldScrollLeft;
+
+      map.scrollTop =
+        oldScrollTop;
+    }
+  });
+}
+
+
+/* =========================================================
+   探索プレビュー
+========================================================= */
+
+function preview(tile) {
+  const d = T[tile.t];
+
+  const normalItems = [];
+  const rareItems = [];
+
+
+  /*
+   * 通常素材
+   */
+
+  if (d.food) {
+    normalItems.push(`
+      <div class="resource-inline">
+        <img
+          src="images/UI/materials_food.png"
+          alt="食料"
+        >
+        <span>
+          ${d.food[0]}～${d.food[1]}
+        </span>
+      </div>
+    `);
+  }
+
+
+  if (d.grass) {
+    normalItems.push(`
+      <div class="resource-inline">
+        <img
+          src="images/UI/materials_grass.png"
+          alt="草"
+        >
+        <span>
+          ${d.grass[0]}～${d.grass[1]}
+        </span>
+      </div>
+    `);
+  }
+
+
+  if (d.wood) {
+    normalItems.push(`
+      <div class="resource-inline">
+        <img
+          src="images/UI/materials_wood.png"
+          alt="木材"
+        >
+        <span>
+          ${d.wood[0]}～${d.wood[1]}
+        </span>
+      </div>
+    `);
+  }
+
+
+  if (d.stone) {
+    normalItems.push(`
+      <div class="resource-inline">
+        <img
+          src="images/UI/materials_stone.png"
+          alt="石材"
+        >
+        <span>
+          ${d.stone[0]}～${d.stone[1]}
+        </span>
+      </div>
+    `);
+  }
+
+
+  if (d.red) {
+    normalItems.push(`
+      <div class="resource-inline">
+        <img
+          src="images/UI/materials_gem_red.png"
+          alt="赤い宝石"
+        >
+        <span>
+          ${
+            d.red[0] === d.red[1]
+              ? `×${d.red[0]}`
+              : `${d.red[0]}～${d.red[1]}`
+          }
+        </span>
+      </div>
+    `);
+  }
+
+
+  if (d.blue) {
+    normalItems.push(`
+      <div class="resource-inline">
+        <img
+          src="images/UI/materials_gem_blue.png"
+          alt="青い宝石"
+        >
+        <span>
+          ${
+            d.blue[0] === d.blue[1]
+              ? `×${d.blue[0]}`
+              : `${d.blue[0]}～${d.blue[1]}`
+          }
+        </span>
+      </div>
+    `);
+  }
+
+
+  /*
+   * レア素材
+   */
+
+  if (d.rare) {
+    let rareImage = '';
+
+    if (
+      d.rare[0] === '食料' ||
+      d.rare[0] === 'レア食料'
+    ) {
+      rareImage =
+        'images/UI/materials_food.png';
+    }
+
+    else if (
+      d.rare[0] === '毛皮'
+    ) {
+      rareImage =
+        'images/UI/materials_fur.png';
+    }
+
+    else if (
+      d.rare[0] === '赤い宝石'
+    ) {
+      rareImage =
+        'images/UI/materials_gem_red.png';
+    }
+
+    else if (
+      d.rare[0] === '青い宝石'
+    ) {
+      rareImage =
+        'images/UI/materials_gem_blue.png';
+    }
+
+    else if (
+      d.rare[0] === '黄色い宝石'
+    ) {
+      rareImage =
+        'images/UI/materials_gem_yellow.png';
+    }
+
+
+    rareItems.push(`
+      <div class="resource-inline rare-resource">
+        <img
+          src="${rareImage}"
+          alt="${d.rare[0]}"
+        >
+        <span>?</span>
+      </div>
+    `);
+  }
+
+
+  return `
+    <div class="resource-preview-normal">
+      ${normalItems.join('')}
+    </div>
+
+    <div class="resource-preview-rare">
+      ${rareItems.join('')}
+    </div>
+  `;
+}
+/* =========================================================
+   探索モーダル
+========================================================= */
+
+function openExplore(tile) {
+  if (S.isExploring) {
+    return;
+  }
+
+
+  /*
+   * 通常探索ボタンへ戻す
+   */
+  const confirmButton =
+    $('confirmExplore');
+
+  confirmButton.textContent =
+    'ここを探索する';
+
+  confirmButton.disabled =
+    false;
+
+
+  const distance = D(tile, S.base);
+  // 拠点から離れる毎に消費が増える
+  const cost = 10 + distance * 1;
+
+  const multiplier =
+    S.fac.weapon === 2
+      ? 0.5
+      : S.fac.weapon === 1
+        ? 0.8
+        : 1;
+
+  const damage = Math.floor(T[tile.t].damage * multiplier);
+
+  S.pending = {
+    tile,
+    cost,
+    damage
+  };
+
+
+  $('exploreTitle').textContent = '';
+
+  const terrainImages =
+    TERRAIN_IMAGES[tile.t] || [];
+
+  const safeImageIndex =
+    terrainImages.length > 0
+      ? (tile.imageIndex || 0) % terrainImages.length
+      : 0;
+
+  const terrainImage =
+    terrainImages[safeImageIndex];
+
+  $('explorePreview').innerHTML = `
+    <div class="target-icon">
+
+      ${
+        terrainImage
+          ? `
+            <img
+              src="${terrainImage}"
+              alt="${T[tile.t].name}"
+            >
+          `
+          : T[tile.t].icon
+      }
+
+    </div>
+
+    <div class="target-info">
+
+      <strong>
+        ${T[tile.t].name}
+      </strong>
+
+      <span>
+        拠点から ${distance} マス
+      </span>
+    </div>
+
+    <div class="target-costs">
+      <span class="target-cost-item">
+        <img
+          src="images/UI/hunger.png"
+          alt="食料"
+        >
+         -${cost}
+      </span>
+
+              ${
+          S.hunger < cost
+            ? `
+              <small>
+                ⚠ 空腹不足分もライフ減少
+              </small>
+            `
+            : ''
+        }
+
+      <span class="target-cost-item">
+        <img
+          src="images/UI/life.png"
+          alt="ライフ"
+        >
+         -${damage}
+      </span>
+
+    </div>
+  `;
+
+  $('resourcePreview').innerHTML =
+    preview(tile);
+
+
+  showModal('exploreModal');
+}
+
+/* =========================================================
+   発見済みゲート操作
+========================================================= */
+function openGateControl(tile) {
+
+  if (
+    S.isExploring ||
+    S.gateActivated ||
+    !S.gateDiscovered
+  ) {
+    return;
+  }
+
+
+  S.pending = {
+    mode: 'gateActivate',
+    tile
+  };
+
+
+  $('exploreTitle').textContent =
+    'ゲート';
+
+
+  $('explorePreview').innerHTML = `
+    <div class="target-icon">
+      🌀
+    </div>
+
+    <div>
+      ゲート発見済み・未起動
+    </div>
+  `;
+
+
+  if (S.compass) {
+
+    $('resourcePreview').innerHTML = `
+      🧭 コンパスが強く反応している。<br>
+      ゲートを起動できそうだ。
+    `;
+
+  }
+
+  else {
+
+    $('resourcePreview').innerHTML = `
+      ゲートは反応しない。<br>
+      🧭 起動にはコンパスが必要なようだ。
+    `;
+
+  }
+
+  const button =
+    $('confirmExplore');
+
+  button.textContent =
+    'ゲートを起動する';
+
+  button.disabled =
+    !S.compass;
+
+
+  showModal(
+    'exploreModal'
+  );
+}
+
+/* =========================================================
+   ゲート起動
+========================================================= */
+
+async function activateGate() {
+
+  /*
+   * 二重起動防止
+   */
+  if (
+    S.isExploring ||
+    S.gateActivated
+  ) {
+    return;
+  }
+
+
+  /*
+   * ゲート未発見なら起動不可
+   */
+  if (!S.gateDiscovered) {
+    return;
+  }
+
+
+  /*
+   * コンパス必須
+   */
+  if (!S.compass) {
+
+    toast(
+      'ゲートの起動にはコンパスが必要です'
+    );
+
+    return;
+  }
+
+
+  /*
+   * 起動処理
+   */
+  S.isExploring = true;
+
+  S.gateActivated = true;
+
+  S.pending = null;
+
+
+  closeModal(
+    'exploreModal'
+  );
+
+  /*
+  * 発見済みゲートへ再訪した場合も
+  * 通常探索アニメーションから開始
+  */
+  const gateResult = {
+    isRare: false,
+    discoveredFood: null
+  };
+
+  await playExploreAnimation(
+    'gate',
+    gateResult
+  );
+
+
+  /*
+  * ゲート起動イベント
+  */
+  await startGateCutscene(
+    true
+  );
+
+
+  /*
+  * エンディングへ
+  */
+  S.isExploring = false;
+
+  await startEndingScene();
+}
+
+/* =========================================================
+   探索演出ユーティリティ
+========================================================= */
+
+function wait(ms) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
+
+
+function setExplorationBackground(terrainId) {
+  const area = $('characterArea');
+
+  if (!area) {
+    return;
+  }
+
+  const background =
+    EXPLORATION_BACKGROUNDS[terrainId] ||
+    EXPLORATION_BACKGROUNDS.grass;
+
+  area.style.backgroundImage =
+    `url("${background}")`;
+}
+
+
+function resetCharacterPosition() {
+  const area = $('characterArea');
+  const char = $('char');
+
+  if (!area || !char) {
+    return;
+  }
+
+  char.style.transition = 'none';
+  area.classList.remove('walking');
+
+  void char.offsetWidth;
+
+  char.style.transition = '';
+}
+
+
+function resetExploreAnimation() {
+  const area = $('characterArea');
+  const discoveryMark = $('discoveryMark');
+
+  if (discoveryMark) {
+    discoveryMark.hidden = true;
+  }
+
+  resetCharacterPosition();
+
+  if (area) {
+    area.style.backgroundImage = '';
+  }
+
+  startCharacterAnimation('idle');
+}
+
+/* =========================================================
+   スクラップブック文字表示
+========================================================= */
+function playGateCutText(text, append = false) {
+
+  const textBox =
+    $('gateCutText');
+
+  if (!textBox) {
+    return Promise.resolve();
+  }
+
+  if (gateCutTextTimer) {
+
+    clearTimeout(
+      gateCutTextTimer
+    );
+
+    gateCutTextTimer = null;
+  }
+
+
+  /*
+   * 新規文章なら一度消す
+   * 追記なら改行だけ追加
+   */
+  if (!append) {
+
+    textBox.textContent = '';
+
+  }
+
+  else if (textBox.textContent) {
+
+    textBox.textContent += '\n';
+
+  }
+
+
+  return new Promise(resolve => {
+
+    let index = 0;
+
+
+    function writeNextCharacter() {
+
+      if (index >= text.length) {
+
+        gateCutTextTimer = null;
+
+        resolve();
+
+        return;
+      }
+
+
+      textBox.textContent +=
+        text[index];
+
+      index++;
+
+
+      gateCutTextTimer =
+        setTimeout(
+          writeNextCharacter,
+          55
+        );
+    }
+
+
+    writeNextCharacter();
+
+  });
+}
+/* =========================================================
+   スクラップブックイベント開始
+========================================================= */
+
+function startGateCutscene(hasCompass) {
+
+  const overlay =
+    $('gateCutsceneOverlay');
+
+  const layer =
+    $('gateCutLayer');
+
+  if (
+    !overlay ||
+    !layer
+  ) {
+    return Promise.resolve();
+  }
+
+
+  /*
+   * 初期化
+   */
+  currentGateCut = 0;
+
+  gateCutInputLocked = false;
+
+  gateCutHasCompass =
+    hasCompass;
+
+  if (gateCutAutoTimer) {
+    clearTimeout(gateCutAutoTimer);
+    gateCutAutoTimer = null;
+  }
+
+  if (gateCutTextTimer) {
+    clearTimeout(gateCutTextTimer);
+    gateCutTextTimer = null;
+  }
+
+  layer.innerHTML = '';
+  const textBox = $('gateCutText');
+
+  if (textBox) {
+    textBox.textContent = '';
+  }
+
+  /*
+   * タップで次のカットへ
+   *
+   * イベント開始時に登録するので、
+   * HTMLの読み込み順に影響されない
+   */
+  overlay.onclick = () => {
+
+    showNextGateCut();
+
+  };
+
+
+  /*
+   * 終了まで待機
+   */
+  return new Promise(resolve => {
+
+    gateCutResolve =
+      resolve;
+
+
+    /*
+     * オーバーレイ表示
+     */
+    overlay.hidden =
+      false;
+
+
+    /*
+     * 1枚目表示
+     */
+    showNextGateCut();
+
+  });
+}
+
+/* =========================================================
+   次のカット表示
+========================================================= */
+
+async function showNextGateCut() {
+
+  if (gateCutInputLocked) {
+    return;
+  }
+
+  const layer =
+    $('gateCutLayer');
+
+  if (!layer) {
+    return;
+  }
+
+  /*
+   * コンパスなし
+   * → 1, 主人公, くぼみ まで
+   *
+   * コンパスあり
+   * → 全7枚
+   */
+  const maxCuts =
+    gateCutHasCompass
+      ? 7
+      : 3;
+
+  /*
+   * 全カット表示済み
+   */
+  if (currentGateCut >= maxCuts) {
+    finishGateCutscene();
+    return;
+  }
+
+  gateCutInputLocked = true;
+  currentGateCut++;
+
+  const image =
+    document.createElement('img');
+
+  image.className =
+    `story-cut story-cut-${currentGateCut}`;
+
+  image.src =
+    GATE_CUT_IMAGES[currentGateCut - 1];
+
+  image.alt =
+    `ゲートイベント ${currentGateCut}`;
+
+  image.style.zIndex =
+    String(currentGateCut);
+
+  layer.appendChild(image);
+
+
+  /*
+   * カット1：最初の一文
+   */
+  if (currentGateCut === 1) {
+
+    await playGateCutText(
+      `${S.day}日目：不思議な場所にたどり着いた`
+    );
+
+    /*
+     * 1秒後に主人公カットを自動表示
+     */
+    if (gateCutAutoTimer) {
+      clearTimeout(gateCutAutoTimer);
+    }
+
+    gateCutAutoTimer = setTimeout(() => {
+      gateCutAutoTimer = null;
+      gateCutInputLocked = false;
+      showNextGateCut();
+    }, 1000);
+
+    return;
+  }
+
+  /*
+  * コンパスなし
+  * カット3で専用メッセージ
+  */
+  if (
+    !gateCutHasCompass &&
+    currentGateCut === 3
+  ) {
+
+    await playGateCutText(
+      '　　　何かをはめる場所なのかしら',
+      true
+    );
+
+    setTimeout(() => {
+
+      gateCutInputLocked =
+        false;
+
+    }, 300);
+
+    return;
+  }  
+
+/*
+ * カット4
+ * 2行目を書き足す
+ */
+if (currentGateCut === 4) {
+
+  await playGateCutText(
+    '　　　コンパスをはめる',
+    true
+  );
+
+
+  /*
+   * 1秒後にカット5
+   */
+  gateCutAutoTimer =
+    setTimeout(() => {
+
+      gateCutAutoTimer = null;
+
+      gateCutInputLocked = false;
+
+      showNextGateCut();
+
+    }, 2000);
+
+  return;
+}
+
+
+/*
+ * カット5
+ * 発光
+ * → 1秒後に自動でカット6
+ */
+if (currentGateCut === 5) {
+
+  gateCutAutoTimer =
+    setTimeout(() => {
+
+      gateCutAutoTimer = null;
+
+      gateCutInputLocked = false;
+
+      showNextGateCut();
+
+    }, 3000);
+
+  return;
+}
+
+
+/*
+ * カット6
+ * 起動ゲート
+ *
+ * ここでは自動進行を止める。
+ * 次のカット7へはタップ。
+ */
+if (currentGateCut === 6) {
+
+  setTimeout(() => {
+
+    gateCutInputLocked = false;
+
+  }, 300);
+
+  return;
+}
+
+
+  /*
+   * 最後のカット：締めの一文
+   */
+  if (currentGateCut === 7) {
+
+    await playGateCutText(
+      '　　　これが私の冒険の終わり',true
+    );
+
+      /*
+      * 最後の文章を少し見せる
+      */
+      await wait(3000);
+
+      /*
+      * ホワイトアウト
+      */
+      await playEndingTransition();
+
+      /*
+      * 今はテスト用として演出終了
+      * 後でここからエンディングへ接続する
+      */
+      finishGateCutscene();
+
+      return;
+      
+  }
+
+  setTimeout(() => {
+    gateCutInputLocked = false;
+  }, 300);
+}
+
+/* =========================================================
+   スクラップブックイベント終了
+========================================================= */
+
+function finishGateCutscene() {
+
+  const overlay =
+    $('gateCutsceneOverlay');
+
+  if (overlay) {
+    overlay.hidden = true;
+  }
+
+  if (gateCutAutoTimer) {
+    clearTimeout(gateCutAutoTimer);
+    gateCutAutoTimer = null;
+  }
+
+  if (gateCutTextTimer) {
+    clearTimeout(gateCutTextTimer);
+    gateCutTextTimer = null;
+  }
+
+  const textBox =
+    $('gateCutText');
+
+  if (textBox) {
+    textBox.textContent = '';
+  }
+
+  currentGateCut = 0;
+  gateCutInputLocked = false;
+
+  if (gateCutResolve) {
+    const resolve = gateCutResolve;
+    gateCutResolve = null;
+    resolve();
+  }
+}
+
+function playGateEndingFade() {
+
+  const fade =
+    $('gateEndingFade');
+
+  if (!fade) {
+    return Promise.resolve();
+  }
+
+  fade.classList.remove(
+    'active'
+  );
+
+  void fade.offsetWidth;
+
+  fade.classList.add(
+    'active'
+  );
+
+  return wait(2800);
+}
+
+async function playEndingTransition() {
+
+  const fade =
+    $('gateEndingFade');
+
+  if (!fade) {
+    return;
+  }
+
+
+  /*
+   * ホワイトアウト
+   */
+  fade.classList.remove(
+    'black'
+  );
+
+  fade.classList.add(
+    'active'
+  );
+
+  await wait(2800);
+
+
+  /*
+   * 白 → 黒
+   */
+  fade.classList.add(
+    'black'
+  );
+
+  await wait(1200);
+
+
+  /*
+   * 完全に黒くなったところで
+   * ゲートの台紙を隠す
+   */
+  const scrapbook =
+    $('gateScrapbook');
+
+  if (scrapbook) {
+    scrapbook.style.visibility =
+      'hidden';
+  }
+}
+
+async function playEndingBlink() {
+
+  const page =
+    $('endingPage');
+
+  if (!page) {
+    return;
+  }
+
+
+  /*
+   * 最初はほぼ真っ暗
+   */
+  page.style.opacity = '0';
+  page.style.filter = 'blur(7px)';
+
+  await wait(500);
+
+
+  /*
+   * 1回目
+   * ぼんやり少しだけ見える
+   */
+  page.style.opacity = '0.55';
+  page.style.filter = 'blur(5px)';
+
+  await wait(350);
+
+
+  /*
+   * また目を閉じる
+   * 完全には消さない
+   */
+  page.style.opacity = '0.08';
+  page.style.filter = 'blur(7px)';
+
+  await wait(350);
+
+
+  /*
+   * 2回目
+   * 少しはっきり見える
+   */
+  page.style.opacity = '0.75';
+  page.style.filter = 'blur(3px)';
+
+  await wait(500);
+
+
+  /*
+   * もう一度閉じる
+   */
+  page.style.opacity = '0.12';
+  page.style.filter = 'blur(6px)';
+
+  await wait(350);
+
+
+  /*
+   * 最後にゆっくり目を開ける
+   */
+  page.style.opacity = '1';
+  page.style.filter = 'blur(0px)';
+
+  await wait(900);
+}
+
+async function startEndingScene() {
+
+  const overlay =
+    $('endingOverlay');
+
+  const layer =
+    $('endingCutLayer');
+
+  const page =
+    $('endingPage');
+
+  const cover =
+    $('endingBookCover');
+
+  const title =
+    $('endingTitle');
+
+
+  if (
+    !overlay ||
+    !layer ||
+    !page ||
+    !cover ||
+    !title
+  ) {
+    return;
+  }
+
+
+  /*
+   * 初期化
+   */
+  layer.innerHTML = '';
+
+  cover.classList.remove(
+    'closing'
+  );
+
+  title.classList.remove(
+    'show'
+  );
+
+
+  /*
+   * エンディング画面を表示
+   *
+   * overlay側の背景が黒なので、
+   * pageが透明な間は真っ黒になる
+   */
+  overlay.hidden = false;
+
+  page.style.opacity =
+    '0';
+
+
+  /*
+   * 黒い間に寝室1枚目を用意
+   */
+  addEndingCut(1);
+
+
+  /*
+   * 瞬き
+   */
+  await playEndingBlink();
+
+
+  /*
+   * 少し寝室を見せる
+   */
+  await wait(1100);
+
+
+  /*
+   * カット2
+   * 目が覚める
+   */
+  addEndingCut(2);
+
+  await wait(1000);
+
+
+  /*
+   * カット3
+   * ほっとする
+   */
+  addEndingCut(3);
+
+  await wait(1800);
+
+
+  /*
+   * カット4
+   * コンパス
+   */
+  addEndingCut(4);
+
+  await wait(3500);
+
+
+  /*
+   * 表紙を閉じる
+   */
+  cover.classList.add(
+    'closing'
+  );
+
+  /*
+   * CSSの表紙transitionに合わせる
+   * 今2秒以上にしているなら、
+   * ここも同程度にする
+   */
+  await wait(2600);
+
+
+  /*
+   * 少し余韻
+   */
+  await wait(2000);
+
+
+  /*
+   * THE END
+   */
+  title.classList.add(
+    'show'
+  );
+}
+
+function addEndingCut(number) {
+
+  const layer =
+    $('endingCutLayer');
+
+  if (!layer) {
+    return;
+  }
+
+
+  const src =
+    ENDING_CUT_IMAGES[
+      number - 1
+    ];
+
+  if (!src) {
+    return;
+  }
+
+
+  const image =
+    document.createElement('img');
+
+  image.className =
+    `ending-cut ending-cut-${number}`;
+
+  image.src =
+    src;
+
+  image.alt =
+    `エンディング ${number}`;
+
+  image.style.zIndex =
+    String(number);
+
+
+  layer.appendChild(
+    image
+  );
+}
+/* =========================================================
+   探索結果決定
+========================================================= */
+
+function createExploreResult(tile) {
+  const terrain = T[tile.t];
+
+  const result = {
+    terrainId: tile.t,
+    food: 0,
+    grass: 0,
+    wood: 0,
+    stone: 0,
+    red: 0,
+    blue: 0,
+    rare: null,
+    discoveredFood: null,
+    isRare: false,
+    gateReward: false
+  };
+
+  if (terrain.food) {
+    result.food = R(...terrain.food);
+  }
+
+  if (terrain.grass) {
+    result.grass = R(...terrain.grass);
+  }
+
+  if (terrain.wood) {
+    result.wood = R(...terrain.wood);
+  }
+
+  if (terrain.stone) {
+    result.stone = R(...terrain.stone);
+  }
+
+  if (terrain.red) {
+    result.red = R(...terrain.red);
+  }
+
+  if (terrain.blue) {
+    result.blue = R(...terrain.blue);
+  }
+
+  if (
+    terrain.rare &&
+    Math.random() < 0.2
+  ) {
+    result.rare = {
+      name: terrain.rare[0],
+      amount: terrain.rare[1],
+      rare: true
+    };
+
+    result.isRare = true;
+  }
+
+  /* =====================================================
+    食材図鑑 発見判定
+  ===================================================== */
+  const undiscoveredFoods =
+    FOOD_MASTER.filter(food =>
+      // 今回の地形で発見できる?
+      food.terrain === tile.t &&
+
+      // まだ図鑑登録されていない
+      !S.book[food.id]
+    );
+
+  const discoveryRate = FOOD_DISCOVERY_RATE[tile.t] || 0;
+
+  if (undiscoveredFoods.length > 0 && Math.random() < discoveryRate) {
+    result.discoveredFood = pickWeightedFood(undiscoveredFoods);
+  }
+
+  if (tile.t === 'gate' && !S.gateRewardClaimed) {
+    result.gateReward = true;
+  }
+
+  return result;
+}
+
+
+/* =========================================================
+   探索結果反映
+========================================================= */
+
+function applyExploreResult(result) {
+  S.food += result.food;
+  S.grass += result.grass;
+  S.wood += result.wood;
+  S.stone += result.stone;
+  S.red += result.red;
+  S.blue += result.blue;
+
+if (result.rare) {
+    const rareName = result.rare.name;
+    const amount = result.rare.amount;
+
+    if (rareName === '毛皮') {
+      S.fur += amount;
+    }
+
+    if (rareName === '赤い宝石') {
+      S.red += amount;
+    }
+
+    if (rareName === '青い宝石') {
+      S.blue += amount;
+    }
+
+    if (rareName === '黄色い宝石') {
+      S.yellow += amount;
+      S.specialFacilityUnlocked = true;
+    }
+
+    if (rareName === '食料') {
+      S.food += amount;
+    }
+  }
+
+  if (
+    result.gateReward &&
+    !S.gateRewardClaimed
+  ) {
+    S.yellow += 1;
+    S.specialFacilityUnlocked = true;
+    S.gateRewardClaimed = true;
+  }
+
+  if (result.discoveredFood) {
+    S.book[result.discoveredFood.id] = 1;
+  }
+
+}
+
+
+/* =========================================================
+   探索アニメーション
+========================================================= */
+
+async function playExploreAnimation(terrainId, result) {
+  const area = $('characterArea');
+  const discoveryMark = $('discoveryMark');
+
+  setExplorationBackground(terrainId);
+
+  stopCharacterAnimation();
+  startCharacterAnimation('walk');
+
+  if (area) {
+    area.classList.add('walking');
+  }
+
+  await wait(3000);
+
+  stopCharacterAnimation();
+  await wait(150);
+
+  if (result.isRare || result.discoveredFood) {
+    startCharacterAnimation('discover');
+
+    if (discoveryMark) {
+      discoveryMark.hidden = false;
+    }
+
+    await wait(550);
+  }
+}
+
+
+/* =========================================================
+   探索実行
+========================================================= */
+async function explore() {
+
+  /*
+   * 二重実行防止
+   */
+  if (S.isExploring) {
+    return;
+  }
+
+
+  const pending = S.pending;
+
+  if (!pending) {
+    return;
+  }
+
+
+  /*
+   * ゲート起動
+   */
+  if (
+    pending.mode === 'gateActivate'
+  ) {
+
+    activateGate();
+
+    return;
+  }
+
+
+  S.isExploring = true;
+
+  const tile = pending.tile;
+  const terrain = T[tile.t];
+
+
+  /* =====================================================
+     探索結果を先に決定
+  ===================================================== */
+  const result = createExploreResult(tile);
+
+
+  /* =====================================================
+     探索開始
+  ===================================================== */
+  closeModal('exploreModal');
+  showBaseView();
+
+  /*
+  * 移動中は探検看板を隠す
+  */
+  $('exploreSign').hidden = true;
+
+  /*
+  * 探索アニメーション
+  */
+  if (tile.t === 'gate') {
+
+    /*
+    * ゲートの場合、
+    * 資源発見演出はまだ出さない。
+    *
+    * 通常の歩行アニメーションだけ再生する。
+    */
+    await playExploreAnimation(
+      tile.t,
+      {
+        ...result,
+        isRare: false,
+        discoveredFood: null
+      }
+    );
+
+
+    /*
+    * 通常探索アニメーションのあとに
+    * ゲートイベント
+    */
+    await startGateCutscene(
+      S.compass
+    );
+
+
+    /* =====================================================
+      コンパスあり
+      → そのままエンディング
+    ===================================================== */
+
+    if (S.compass) {
+
+      S.gateDiscovered = true;
+      S.gateActivated = true;
+
+      S.pending = null;
+      S.isExploring = false;
+
+
+      /*
+      * 寝室エンディング
+      */
+      await startEndingScene();
+
+      return;
+    }
+
+  }
+  else {
+
+    /*
+    * 通常地形
+    */
+    await playExploreAnimation(
+      tile.t,
+      result
+    );
+
+  }
+
+  /* =====================================================
+     空腹・ライフ
+  ===================================================== */
+
+  const shortage =
+    Math.max(
+      0,
+      pending.cost - S.hunger
+    );
+
+
+  S.hunger =
+    Math.max(
+      0,
+      S.hunger - pending.cost
+    );
+
+
+  S.life -=
+    pending.damage +
+    shortage;
+
+
+  /* =====================================================
+     獲得結果反映
+  ===================================================== */
+
+  applyExploreResult(
+    result
+  );
+
+
+  /* =====================================================
+     探索済み
+  ===================================================== */
+
+  tile.seen = true;
+
+  /* =====================================================
+     ログ
+  ===================================================== */
+
+  const distance =
+    D(
+      tile,
+      S.base
+    );
+
+
+  S.log.unshift(
+    `Day ${S.day}　` +
+    `${terrain.name}を探索 ` +
+    `(拠点から${distance}マス)`
+  );
+
+
+  /* =====================================================
+     Day進行
+  ===================================================== */
+  S.day++;
+
+  /* =====================================================
+    拠点によるライフ回復
+  ===================================================== */
+  recoverLifeFromBase();
+
+  /* =====================================================
+     今回の探索先をクリア
+  ===================================================== */
+
+  S.pending = null;
+
+
+  /* =====================================================
+     ゲート・ゲームオーバー判定を保存
+  ===================================================== */
+  const exploredGate =
+    tile.t === 'gate';
+
+  if (exploredGate) {
+
+    S.gateDiscovered =
+      true;
+
+  }
+
+  /*
+  * 旧クリアalertは使用しない
+  */
+  S.pendingGameClear = false;
+
+  S.pendingGameOver =
+    S.life <= 0;
+
+
+  /* =====================================================
+     画面更新
+  ===================================================== */
+
+  render();
+
+
+  /* =====================================================
+     結果表示
+  ===================================================== */
+
+  /*
+   * ここでは探索演出をリセットしない。
+   *
+   * キャラクターは歩いた先で停止。
+   * S.isExploring も true のまま。
+   *
+   * OKボタンを押したときに終了処理する。
+   */
+  showExploreResult(
+    result
+  );
+
+}
+
+/* =========================================================
+   探索結果表示
+========================================================= */
+function showExploreResult(result) {
+
+  const detail =
+    $('exploreResultDetail');
+
+
+  if (!detail) {
+    return;
+  }
+
+
+  const items = [];
+
+
+  /* =====================================================
+     通常資源
+  ===================================================== */
+
+  if (result.food > 0) {
+
+    items.push({
+      image: 'images/UI/materials_food.png',
+      name: '食料',
+      amount: result.food,
+      rare: false
+    });
+
+  }
+
+
+  if (result.grass > 0) {
+
+    items.push({
+      image: 'images/UI/materials_grass.png',
+      name: '草',
+      amount: result.grass,
+      rare: false
+    });
+
+  }
+
+
+  if (result.wood > 0) {
+
+    items.push({
+      image: 'images/UI/materials_wood.png',
+      name: '木材',
+      amount: result.wood,
+      rare: false
+    });
+
+  }
+
+
+  if (result.stone > 0) {
+
+    items.push({
+      image: 'images/UI/materials_stone.png',
+      name: '石材',
+      amount: result.stone,
+      rare: false
+    });
+
+  }
+
+
+  if (result.red > 0) {
+
+    items.push({
+      image: 'images/UI/materials_gem_red.png',
+      name: '赤い宝石',
+      amount: result.red,
+      rare: false
+    });
+
+  }
+
+
+  if (result.blue > 0) {
+
+    items.push({
+      image: 'images/UI/materials_gem_blue.png',
+      name: '青い宝石',
+      amount: result.blue,
+      rare: false
+    });
+
+  }
+
+
+  /* =====================================================
+     レア素材
+  ===================================================== */
+
+  if (result.rare) {
+
+    const rareImages = {
+
+      '食料':
+        'images/UI/materials_food.png',
+
+      'レア食料':
+        'images/UI/materials_food.png',
+
+      '毛皮':
+        'images/UI/materials_fur.png',
+
+      '赤い宝石':
+        'images/UI/materials_gem_red.png',
+
+      '青い宝石':
+        'images/UI/materials_gem_blue.png',
+
+      '黄色い宝石':
+        'images/UI/materials_gem_yellow.png'
+
+    };
+
+
+    items.push({
+
+      image:
+        rareImages[
+          result.rare.name
+        ] || '',
+
+      name:
+        result.rare.name,
+
+      amount:
+        result.rare.amount,
+
+      rare: true
+
+    });
+
+  }
+
+
+  /* =====================================================
+     ゲート初回報酬
+  ===================================================== */
+
+  if (result.gateReward) {
+
+    items.push({
+
+      image:
+        'images/UI/materials_gem_yellow.png',
+
+      name:
+        '黄色い宝石',
+
+      amount:
+        1,
+
+      rare:
+        true
+
+    });
+
+  }
+
+
+  /* =====================================================
+     食材図鑑発見
+  ===================================================== */
+
+  if (result.discoveredFood) {
+    items.push({
+      image: result.discoveredFood.image,
+      name: `新しい食材：${result.discoveredFood.name}`,
+      amount: null,
+      rare: true,
+      discovery: true
+    });
+  }
+
+  /* =====================================================
+     HTML生成
+  ===================================================== */
+
+  if (items.length === 0) {
+
+    detail.innerHTML = `
+      <div class="explore-result-empty">
+        今回は何も見つからなかった……
+      </div>
+    `;
+
+  }
+
+  else {
+
+    detail.innerHTML = `
+      <div class="explore-result-list">
+
+        ${
+          items
+            .map(item => {
+
+              return `
+                <div
+                  class="
+                    explore-result-item
+                    ${item.rare ? 'rare' : ''}
+                  "
+                >
+
+                  <span class="result-resource">
+
+                    ${
+                      item.image
+                        ? `
+                          <img
+                            src="${item.image}"
+                            alt="${item.name}"
+                          >
+                        `
+                        : ''
+                    }
+                    <span>
+                      ${item.name}
+                    </span>
+
+                  </span>
+
+                  ${
+                    item.amount !== null
+                      ? `
+                        <strong>
+                          ×${item.amount}
+                        </strong>
+                      `
+                      : ''
+                  }
+
+                </div>
+              `;
+
+            })
+            .join('')
+        }
+
+      </div>
+    `;
+
+  }
+
+
+  showModal(
+    'exploreResultModal'
+  );
+
+}
+
+/* =========================================================
+   1日経過時の拠点回復
+========================================================= */
+function recoverLifeFromBase() {
+
+  const recovery =
+    S.fac.base === 3
+      ? 3
+      : S.fac.base === 2
+        ? 2
+        : S.fac.base === 1
+          ? 1
+          : 0;
+
+
+  if (recovery <= 0) {
+    return;
+  }
+
+
+  S.life =
+    Math.min(
+      S.maxLife,
+      S.life + recovery
+    );
+
+}
+
+/* =========================================================
+   食べる
+========================================================= */
+
+function eat() {
+  if (!S.food) {
+    toast('食料がありません');
+    return;
+  }
+
+
+  const amount =
+    S.fac.kitchen === 2
+      ? 15
+      : S.fac.kitchen === 1
+        ? 12
+        : 10;
+
+
+  S.food--;
+
+  S.hunger =
+    Math.min(
+      S.maxHunger,
+      S.hunger + amount
+    );
+
+
+  $('char').textContent = '🍖';
+
+
+  setTimeout(() => {
+    $('char').textContent = '👨‍💼';
+  }, 700);
+
+
+  render();
+}
+
+
+/* =========================================================
+   施設定義
+========================================================= */
+
+const FACILITIES = {
+  base: {
+    name: '拠点',
+    icon: '🏕️',
+
+    initialName: '大地',
+    initialFlavor: 'とっても広いお部屋だわ',
+
+    images: [
+      'images/base_lv0.png',
+      'images/base_lv1.png',
+      'images/base_lv2.png',
+      'images/base_lv3.png'
+    ],
+
+    levels: [
+      {
+        name: '藁の寝床',
+        cost: {
+          grass: 5
+        },
+        effect: '1日ごとにライフ +1',
+        flavor: '馬舎の子たちも、暖かかったのね'
+      },
+
+      {
+        name: '簡易小屋',
+        cost: {
+          grass: 10,
+          wood: 5,
+          stone: 2
+        },
+        effect: '1日ごとにライフ +2',
+        flavor: 'こう……屋根があると落ち着かないわね'
+      },
+
+      {
+        name: '藁の家',
+        cost: {
+          grass: 50,
+          wood: 5
+        },
+        effect: '1日ごとにライフ +3',
+        flavor: '藁の家って、吹き飛ばされそうでちょっと不吉よね'
+      }
+    ]
+  },
+
+  kitchen: {
+    name: '食堂',
+    icon: '🔥',
+
+    initialName: '1枚のお皿',
+    initialFlavor: 'お皿に盛り付ければ、ごちそうのできあがりよ',
+
+    images: [
+      'images/kitchen_lv0.png',
+      'images/kitchen_lv1.png',
+      'images/kitchen_lv2.png'
+    ],
+
+    levels: [
+      {
+        name: '焚き火',
+        cost: {
+          wood: 5
+        },
+        effect: '食事回復量 10 → 12',
+        flavor: '焼いてみれば、なんでもおいしくなるわ'
+      },
+
+      {
+        name: '電気鍋',
+        cost: {
+          stone: 5,
+          red: 1
+        },
+        effect: '食事回復量 12 → 15',
+        flavor: 'なんでも作れる魔法の鍋……ただの電気鍋ね'
+      }
+    ]
+  },
+
+  weapon: {
+    name: '武器',
+    icon: '⚔️',
+
+    initialName: 'KOBUSHI',
+    initialFlavor: '拳があれば、なんとかなるわ',
+
+    images: [
+      'images/weapon_lv0.png',
+      'images/weapon_lv1.png',
+      'images/weapon_lv2.png'
+    ],
+    levels: [
+      { name: '木の棍棒', cost: { wood: 5 }, effect: '探索ダメージを20%軽減' ,flavor: 'ただの棒でも心強いわね'},
+      { name: '石の槍', cost: { stone: 5, fur: 1 }, effect: '探索ダメージを50%軽減' ,flavor: '構えて...突く、それだけね'}
+    ]
+  },
+
+  armor: {
+    name: '防具',
+    icon: '🛡️',
+
+    initialName: 'エア盾',
+    initialFlavor: 'エア盾って魔法の盾みたいでかっこいい',
+
+    images: [
+      'images/armor_lv0.png',
+      'images/armor_lv1.png',
+      'images/armor_lv2.png'
+    ],
+    levels: [
+      { name: '木の盾', cost: { wood: 5 }, effect: '最大ライフ 100 → 120' ,flavor: '……現実ってこういうのよね'},
+      { name: '石の盾', cost: { stone: 5, fur: 1 }, effect: '最大ライフ 120 → 150' ,flavor: '毎日持ってたらムキムキになりそうね……'}
+    ]
+  }
+};
+
+const RESOURCE_NAMES = {
+  grass: '草',
+  wood: '木材',
+  stone: '石材',
+  fur: '毛皮',
+  red: '赤い宝石',
+  blue: '青い宝石',
+  yellow: '黄色い宝石'
+};
+
+const RESOURCE_IMAGES = {
+  grass: 'images/UI/materials_grass.png',
+  wood: 'images/UI/materials_wood.png',
+  stone: 'images/UI/materials_stone.png',
+  fur: 'images/UI/materials_fur.png',
+  red: 'images/UI/materials_gem_red.png',
+  blue: 'images/UI/materials_gem_blue.png',
+  yellow: 'images/UI/materials_gem_yellow.png'
+};
+
+function canPayCost(cost) {
+  return Object.entries(cost).every(([key, amount]) => S[key] >= amount);
+}
+
+function payCost(cost) {
+  Object.entries(cost).forEach(([key, amount]) => {
+    S[key] -= amount;
+  });
+}
+
+function costText(cost) {
+  return Object.entries(cost)
+    .map(([key, amount]) => `${RESOURCE_NAMES[key]} ×${amount}`)
+    .join('　');
+}
+
+function costHtml(cost) {
+  return Object.entries(cost)
+    .map(([key, amount]) => `
+      <div class="facility-cost-item">
+        <img
+          src="${RESOURCE_IMAGES[key]}"
+          alt="${RESOURCE_NAMES[key]}"
+        >
+        <span>${amount}</span>
+      </div>
+    `)
+    .join('');
+}
+
+function imageWithFallback(src, alt, fallback) {
+  return `
+    <div class="facility-art-wrap">
+      <img
+        class="facility-image"
+        src="${src}"
+        alt="${alt}"
+        onerror="this.hidden=true;this.nextElementSibling.hidden=false;"
+      >
+      <div class="facility-fallback" hidden>${fallback}</div>
+    </div>
+  `;
+}
+
+const SPECIAL_FACILITIES = {
+  fridge: {
+    name: '冷蔵庫',
+    icon: '🧊',
+    image: 'images/goods_fridge.png',
+    cost: {
+      yellow: 1,
+      blue: 2,
+      stone: 10
+    },
+    effect: '空腹最大値 +50',
+    flavor: '昨日の残りが今日も食べられる……文明って素敵ね'
+  },
+
+  compass: {
+    name: 'コンパス',
+    icon: '🧭',
+    image: 'images/goods_compass.png',
+    cost: {
+      yellow: 1,
+      blue: 1,
+      red: 1
+    },
+    effect: 'ゲートの位置が分かる・起動できる',
+    flavor: '私、どうやってこれを作ったんだろ……'
+  }
+};
+
+/* =========================================================
+   施設確認モーダル
+========================================================= */
+function openFacilityModal(id) {
+  const facility = FACILITIES[id];
+  if (!facility) return;
+
+  const currentLevel = S.fac[id];
+  const nextLevel = currentLevel + 1;
+
+  $('facilityTitle').textContent = facility.name;
+
+  if (nextLevel > facility.levels.length) {
+    $('facilityDetail').innerHTML = `
+      ${imageWithFallback(facility.images[currentLevel], facility.name, facility.icon)}
+      <div class="facility-modal-copy">
+        <strong>${facility.name} Lv${currentLevel}</strong>
+        <p>最大レベルです。</p>
+      </div>
+    `;
+    $('facilityUpgradeBtn').hidden = true;
+    showModal('facilityModal');
+    return;
+  }
+
+  const next = facility.levels[nextLevel - 1];
+
+  const currentName =
+    currentLevel === 0
+      ? facility.initialName
+      : facility.levels[currentLevel - 1].name;
+
+  const currentFlavor =
+    currentLevel === 0
+      ? facility.initialFlavor
+      : facility.levels[currentLevel - 1].flavor;
+
+  const baseRequirement =
+    id === 'base' ||
+    nextLevel <= S.fac.base;
+
+  const affordable =
+    canPayCost(next.cost);
+
+  $('facilityDetail').innerHTML = `
+    <div class="facility-upgrade-preview">
+
+      <div class="facility-preview-card">
+
+        <small>現在</small>
+
+        ${imageWithFallback(
+          facility.images[currentLevel],
+          `${facility.name} Lv${currentLevel}`,
+          facility.icon
+        )}
+
+        <strong>
+          Lv${currentLevel}　${currentName}
+        </strong>
+
+        ${
+          currentFlavor
+            ? `
+              <p class="facility-card-flavor">
+                ${currentFlavor}
+              </p>
+            `
+            : ''
+        }
+
+      </div>
+
+
+      <div class="facility-arrow">
+        →
+      </div>
+
+
+      <div class="facility-preview-card">
+
+        <small>レベルアップ後</small>
+
+        ${imageWithFallback(
+          facility.images[nextLevel],
+          `${facility.name} Lv${nextLevel}`,
+          facility.icon
+        )}
+
+        <strong>
+          Lv${nextLevel}　${next.name}
+        </strong>
+
+        ${
+          next.flavor
+            ? `
+              <p class="facility-card-flavor">
+                ${next.flavor}
+              </p>
+            `
+            : ''
+        }
+
+      </div>
+
+    </div>
+
+
+    <div class="facility-modal-copy">
+
+      <div class="facility-cost-section">
+        <b>必要素材</b>
+        <div class="facility-cost-list">
+          ${costHtml(next.cost)}
+        </div>
+      </div>
+
+      <p>
+        <b>効果</b><br>
+        ${next.effect}
+      </p>
+
+      ${
+        !baseRequirement
+          ? `
+            <p class="facility-warning">
+              先に拠点を Lv${nextLevel} にしてください。
+            </p>
+          `
+          : ''
+      }
+
+      ${
+        baseRequirement && !affordable
+          ? `
+            <p class="facility-warning">
+              素材が足りません。
+            </p>
+          `
+          : ''
+      }
+
+    </div>
+  `;
+
+  const button = $('facilityUpgradeBtn');
+  button.textContent = 'レベルアップ';
+  button.hidden = false;
+  button.disabled = !baseRequirement || !affordable;
+  button.onclick = () => upgradeFacility(id);
+
+  showModal('facilityModal');
+}
+
+function upgradeFacility(id) {
+  const facility = FACILITIES[id];
+  if (!facility) return;
+
+  const nextLevel = S.fac[id] + 1;
+  const next = facility.levels[nextLevel - 1];
+  if (!next) return;
+
+  const baseRequirement = id === 'base' || nextLevel <= S.fac.base;
+  if (!baseRequirement || !canPayCost(next.cost)) return;
+
+  payCost(next.cost);
+  S.fac[id] = nextLevel;
+
+  if (id === 'armor') {
+    if (nextLevel === 1) {
+      S.maxLife = 120;
+      S.life += 20;
+    } else if (nextLevel === 2) {
+      S.maxLife = 150;
+      S.life += 30;
+    }
+    S.life = Math.min(S.life, S.maxLife);
+  }
+
+  closeModal('facilityModal');
+  render();
+  toast(`${facility.name} Lv${nextLevel}：${next.name}`);
+}
+
+function openSpecialFacilityModal(type) {
+
+  /*
+   * 未解放なら開かない
+   */
+  if (!S.specialFacilityUnlocked) {
+    return;
+  }
+
+
+  const facility =
+    SPECIAL_FACILITIES[type];
+
+  if (!facility) {
+    return;
+  }
+
+
+  const isFridge =
+    type === 'fridge';
+
+  const built =
+    isFridge
+      ? S.maxHunger > 100
+      : S.compass;
+
+  const affordable =
+    canPayCost(facility.cost);
+
+
+  $('facilityTitle').textContent =
+    facility.name;
+
+
+  $('facilityDetail').innerHTML = `
+
+    <div
+      class="
+        special-facility-preview
+        ${built ? '' : 'special-silhouette'}
+      "
+    >
+
+      ${imageWithFallback(
+        facility.image,
+        facility.name,
+        facility.icon
+      )}
+
+      <p class="facility-card-flavor">
+        ${facility.flavor}
+      </p>
+
+    </div>
+
+
+    <div class="facility-modal-copy">
+
+      ${
+        built
+          ? `
+            <p>
+              建設済みです。
+            </p>
+          `
+          : `
+            <div class="facility-cost-section">
+
+              <b>必要素材</b>
+
+              <div class="facility-cost-list">
+                ${costHtml(facility.cost)}
+              </div>
+
+            </div>
+
+
+            <p>
+              <b>効果</b><br>
+              ${facility.effect}
+            </p>
+
+
+            ${
+              !affordable
+                ? `
+                  <p class="facility-warning">
+                    素材が足りません。
+                  </p>
+                `
+                : ''
+            }
+          `
+      }
+
+    </div>
+  `;
+
+
+  const button =
+    $('facilityUpgradeBtn');
+
+
+  button.hidden =
+    built;
+
+  button.disabled =
+    built || !affordable;
+
+  button.textContent =
+    '建設する';
+
+
+  button.onclick = () => {
+
+    if (
+      built ||
+      !canPayCost(facility.cost)
+    ) {
+      return;
+    }
+
+
+    payCost(
+      facility.cost
+    );
+
+
+    if (isFridge) {
+
+      S.maxHunger = 150;
+
+    }
+
+    else {
+
+      S.compass = true;
+
+    }
+
+
+    closeModal(
+      'facilityModal'
+    );
+
+    render();
+
+
+    if (isFridge) {
+
+      toast(
+        '冷蔵庫を建設した'
+      );
+
+    }
+
+    else {
+
+      toast(
+        '拠点にゲートの方角が表示された'
+      );
+
+    }
+
+  };
+
+
+  showModal(
+    'facilityModal'
+  );
+}
+
+/* =========================================================
+   施設表示
+========================================================= */
+
+function renderFacilities() {
+
+  const facilities = $('facilities');
+
+  if (!facilities) {
+    return;
+  }
+
+  /*
+   * この配列の順番で施設を表示する
+   *
+   * 1段目：拠点・食堂・冷蔵庫
+   * 2段目：武器・防具・コンパス
+   */
+  const facilityOrder = [
+    'base',
+    'kitchen',
+    'fridge',
+    'weapon',
+    'armor',
+    'compass'
+  ];
+
+
+  facilities.innerHTML =
+    facilityOrder
+      .map(id => {
+
+        /*
+        * 冷蔵庫
+        */
+        if (id === 'fridge') {
+
+          const built =
+            S.maxHunger > 100;
+
+          const unlocked =
+            S.specialFacilityUnlocked;
+
+          return `
+            <button
+              class="
+                facility
+                ${!unlocked ? 'special-hidden' : ''}
+                ${unlocked && !built ? 'special-silhouette' : ''}
+              "
+              data-special-facility="fridge"
+              ${!unlocked ? 'disabled' : ''}
+            >
+
+              <div class="facility-image-wrap">
+
+                ${
+                  !unlocked
+                    ? ''
+                    : `
+                      <img
+                        class="facility-image"
+                        src="images/goods_fridge.png"
+                        alt="冷蔵庫"
+                        onerror="
+                          this.style.display='none';
+                          this.nextElementSibling.style.display='flex';
+                        "
+                      >
+
+                      <div
+                        class="facility-fallback"
+                        style="display:none"
+                      >
+                        🧊
+                      </div>
+                    `
+                }
+
+              </div>
+
+              <div class="facility-name">
+                ${unlocked ? '冷蔵庫' : ''}
+              </div>
+
+              <div class="facility-level">
+                ${
+                  !unlocked
+                    ? ''
+                    : built
+                      ? '建設済'
+                      : '未建設'
+                }
+              </div>
+
+            </button>
+          `;
+        }
+
+        /*
+        * コンパス
+        */
+        if (id === 'compass') {
+
+          const built =
+            S.compass;
+
+          const unlocked =
+            S.specialFacilityUnlocked;
+
+          return `
+            <button
+              class="
+                facility
+                ${!unlocked ? 'special-hidden' : ''}
+                ${unlocked && !built ? 'special-silhouette' : ''}
+              "
+              data-special-facility="compass"
+              ${!unlocked ? 'disabled' : ''}
+            >
+
+              <div class="facility-image-wrap">
+
+                ${
+                  !unlocked
+                    ? ''
+                    : `
+                      <img
+                        class="facility-image"
+                        src="images/goods_compass.png"
+                        alt="コンパス"
+                        onerror="
+                          this.style.display='none';
+                          this.nextElementSibling.style.display='flex';
+                        "
+                      >
+
+                      <div
+                        class="facility-fallback"
+                        style="display:none"
+                      >
+                        🧭
+                      </div>
+                    `
+                }
+
+              </div>
+
+              <div class="facility-name">
+                ${unlocked ? 'コンパス' : ''}
+              </div>
+
+              <div class="facility-level">
+                ${
+                  !unlocked
+                    ? ''
+                    : built
+                      ? '建設済'
+                      : '未建設'
+                }
+              </div>
+
+            </button>
+          `;
+        }
+
+        /*
+         * 通常施設
+         */
+        const facility =
+          FACILITIES[id];
+
+        if (!facility) {
+          return '';
+        }
+
+        const level =
+          S.fac[id];
+
+        const image =
+          facility.images[level];
+
+
+        return `
+          <button
+            class="facility"
+            data-facility="${id}"
+          >
+
+            <div class="facility-image-wrap">
+
+              <img
+                class="facility-image"
+                src="${image}"
+                alt="${facility.name}"
+                onerror="
+                  this.style.display='none';
+                  this.nextElementSibling.style.display='flex';
+                "
+              >
+
+              <div
+                class="facility-fallback"
+                style="display:none"
+              >
+                ${facility.icon}
+              </div>
+
+            </div>
+
+            <div class="facility-name">
+              ${facility.name}
+            </div>
+
+            <div class="facility-level">
+              Lv${level}
+            </div>
+
+          </button>
+        `;
+      })
+      .join('');
+
+
+  /*
+   * 通常施設クリック
+   */
+  document
+    .querySelectorAll('[data-facility]')
+    .forEach(button => {
+
+      button.onclick = () => {
+        openFacilityModal(
+          button.dataset.facility
+        );
+      };
+
+    });
+
+
+  /*
+   * 冷蔵庫・コンパスクリック
+   */
+  document
+    .querySelectorAll('[data-special-facility]')
+    .forEach(button => {
+
+      button.onclick = () => {
+        openSpecialFacilityModal(
+          button.dataset.specialFacility
+        );
+      };
+
+    });
+}
+
+/* =========================================================
+   食材図鑑
+========================================================= */
+function renderBook() {
+
+  $('book').innerHTML =
+    FOOD_MASTER
+      .map(food => {
+
+        const discovered =
+          !!S.book[food.id];
+
+
+        return `
+          <div
+            class="
+              book-card
+              ${discovered ? '' : 'locked'}
+            "
+          >
+
+            <div class="food-art">
+
+              <div class="food-book-image">
+
+                <img
+                  class="food-book-background"
+                  src="${food.background}"
+                  alt=""
+                >
+
+                <img
+                  class="food-book-main"
+                  src="${food.image}"
+                  alt="${discovered ? food.name : '未発見'}"
+                >
+
+              </div>
+
+            </div>
+
+
+            <div class="food-book-name">
+              ${
+                discovered
+                  ? food.name
+                  : '？？？'
+              }
+            </div>
+
+            <div class="food-book-location">
+              見つかる場所：${FOOD_TERRAIN_NAMES[food.terrain] || '不明'}
+            </div>
+
+            ${
+              discovered
+                ? `
+                  <p class="food-flavor">
+                    ${food.flavor}
+                  </p>
+                `
+                : ''
+            }
+
+          </div>
+        `;
+
+      })
+      .join('');
+
+}
+
+/* =========================================================
+   イベント
+========================================================= */
+/*
+ * START
+ */
+$('start').onclick = () => {
+  $('title').hidden = true;
+  $('game').hidden = false;
+
+  init();
+
+  showBaseView();
+
+  render();
+
+  startCharacterAnimation('idle');
+};
+
+
+/*
+ * 食べる
+ */
+$('eat').onclick = eat;
+
+
+/*
+ * 探索画面へ
+ */
+$('exploreSign').onclick = () => {
+  if (S.isExploring) {
+    return;
+  }
+
+  showExploreView();
+};
+
+/*
+ * 拠点画面へ
+ */
+$('backToBase').onclick = () => {
+  showBaseView();
+};
+
+
+/*
+ * 探索確定
+ */
+$('confirmExplore').onclick = explore;
+
+
+/*
+ * 探索モーダル閉じる
+ */
+$('modalClose').onclick = () => {
+  closeModal('exploreModal');
+};
+
+
+$('cancelExplore').onclick = () => {
+  closeModal('exploreModal');
+};
+
+
+/*
+ * 食材図鑑
+ */
+$('bookBtn').onclick = () => {
+  renderBook();
+  showModal('bookModal');
+};
+
+
+/*
+ * ログ消去
+ */
+$('clearLog').onclick = () => {
+  $('log').innerHTML = '';
+};
+
+
+
+/* 施設確認モーダル */
+$('facilityClose').onclick = () => closeModal('facilityModal');
+$('facilityCancel').onclick = () => closeModal('facilityModal');
+
+/*
+ * モーダル閉じる
+ */
+document
+  .querySelectorAll('.modalClose2')
+  .forEach(button => {
+    button.onclick = () => {
+      const modal =
+        button.closest('.modal-backdrop');
+
+      if (modal) {
+        closeModal(modal.id);
+      }
+    };
+  });
+
+  /* =========================================================
+   探索結果 OK
+========================================================= */
+$('exploreResultOk').onclick = () => {
+
+  /*
+   * 結果モーダルを閉じる
+   */
+  closeModal(
+    'exploreResultModal'
+  );
+
+
+  /*
+   * 探索演出をリセット
+   *
+   * ・キャラを通常位置へ
+   * ・発見マーク削除
+   * ・背景リセット
+   * ・待機アニメーション再開
+   */
+  resetExploreAnimation();
+
+
+  /*
+   * 探索ロック解除
+   */
+  S.isExploring = false;
+
+
+  /*
+   * 拠点画面へ
+   */
+  showBaseView();
+
+
+  /*
+   * 最新状態を表示
+   */
+  render();
+
+
+  /* =====================================================
+     ゲームクリア
+  ===================================================== */
+
+  if (S.pendingGameClear) {
+
+    S.pendingGameClear = false;
+
+    alert(
+      'ゲートが起動した！ GAME CLEAR'
+    );
+
+    location.reload();
+
+    return;
+  }
+
+
+  /* =====================================================
+     ゲームオーバー
+  ===================================================== */
+
+  if (S.pendingGameOver) {
+
+    S.pendingGameOver = false;
+
+    alert(
+      'GAME OVER'
+    );
+
+    location.reload();
+
+    return;
+  }
+
+};
