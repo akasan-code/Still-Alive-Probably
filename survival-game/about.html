@@ -209,6 +209,27 @@
     .action-card p:last-child {
       margin-bottom: 0;
     }
+    .action-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .action-heading h3 {
+      margin: 0;
+    }
+
+    .action-icon {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+    }
+
+    .action-card > p {
+      text-align: left;
+    }
 
     .flavor {
       color: var(--muted);
@@ -406,9 +427,16 @@
 
           <div class="actions">
             <section class="action-card">
-              <h3>探索する</h3>
+              <div class="action-heading">
+                <img
+                  src="./images/UI/explore_sign.png"
+                  alt=""
+                  class="action-icon"
+                >
+                <h3>探索する</h3>
+              </div>
               <p>
-                「探索する」ボタンから、周囲の世界を探索できます。
+                周囲の世界を探索できます。
               </p>
               <p>
                 探索すると木材や石材、食糧などの資源を手に入れることができます。
@@ -423,9 +451,16 @@
             </section>
 
             <section class="action-card">
-              <h3>食べる</h3>
+              <div class="action-heading">
+                <img
+                  src="./images/UI/eat.png"
+                  alt=""
+                  class="action-icon"
+                >
+                <h3>食べる</h3>
+              </div>
               <p>
-                「食べる」ボタンから食事ができます。
+                食事ができます。
               </p>
               <p>
                 <strong>食糧を1消費して、空腹度を回復</strong>します。
