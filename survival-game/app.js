@@ -255,15 +255,21 @@ const CHARACTER_ANIMATIONS = {
       'images/character_walk2.png',
       'images/character_walk3.png',
       'images/character_walk4.png',
-      'images/character_walk5.png'
+      'images/character_walk5.png',
+      'images/character_walk4.png',
+      'images/character_walk3.png',
+      'images/character_walk2.png'
     ],
 
     durations: [
-      300,
-      300,
-      300,
-      300,
-      300
+      140,
+      140,
+      140,
+      140,
+      140,
+      140,
+      140,
+      140
     ]
   },
 
