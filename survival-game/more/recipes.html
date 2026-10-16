@@ -211,6 +211,51 @@
         margin: 36px auto;
       }
     }
+
+      /* レシピの並び（横並び・中央寄せ） */
+      .nav-menu {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          justify-content: center;
+          flex-direction: column; /* ★子要素を縦並びにする */
+          align-items: center;    /* ★縦並びのボタンを中央に寄せる */
+          gap: 1px; /* ボタン同士の間隔 */
+          flex-wrap: wrap;
+      }
+
+      /* ★すべてのボタンに共通の画像とデザインを適用 */
+      .nav-item a {
+          display: flex;
+          align-items: center;    /* 文字を上下中央に */
+          justify-content: center; /* 文字を左右中央に */
+          width: 500px;           /* イラストの横幅に合わせる */
+          height: 200px;           /* イラストの縦幅に合わせる */
+          text-decoration: none;
+          color: #ffffff;         /* 文字色 */
+          font-weight: bold;
+          font-size: 22px;
+          text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6); /* 文字の影 */
+          
+          background-image: url('./recipes/images/menu_bg.png'); 
+          background-size: contain;
+          background-position: center;
+          background-repeat: no-repeat;
+          
+          transition: all 0.2s ease; /* ホバー時のアニメーション */
+      }
+
+      /* マウスを乗せた時（ホバー時）の演出 */
+      /* 例として、少し浮き上がらせて、画像を少し明るく（不透明度を調整）します */
+      .nav-item a:hover {
+          transform: translateY(-3px); /* 3px上に持ち上げる */
+          opacity: 0.9;                /* 少しだけ透明にして明るく見せる */
+      }
+
+      .nav-menu .nav-item + .nav-item {
+          margin-top: -10px; /* ★ここの数値を大きくするほど、間隔が詰まります */
+      }
   </style>
 </head>
 
@@ -231,10 +276,18 @@
 
           <div class="divider"></div>
 
+          <nav>
+              <ul class="nav-menu">
+                  <li class="nav-item"><a href="#home">蝶ベリージャム</a></li>
+                  <li class="nav-item"><a href="#about">串焼きキノコ</a></li>
+                  <li class="nav-item"><a href="#services"></a></li>
+                  <li class="nav-item"><a href="#contact"></a></li>
+              </ul>
+          </nav>
+
+          <div class="divider"></div>
+
         </section>
-
-        <div class="divider"></div>
-
         <div class="backpage"">
           <a href="./more.html">戻る</a>
         </div>
