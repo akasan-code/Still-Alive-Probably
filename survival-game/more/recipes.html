@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="STILL ALIVE, PROBABLY - 奇妙な世界を生き抜いて脱出するサバイバル探索ゲーム">
+  <title>ABOUT | STILL ALIVE, PROBABLY</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Yomogi&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #171611;
+      --paper: #e9dec1;
+      --paper-dark: #d5c7a5;
+      --ink: #28251e;
+      --muted: #625b4c;
+      --accent: #7c2f27;
+      --accent-dark: #55201b;
+      --line: rgba(61, 53, 39, 0.28);
+      --shadow: rgba(0, 0, 0, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(255,255,255,0.03), transparent 24%),
+        radial-gradient(circle at 80% 75%, rgba(255,255,255,0.025), transparent 24%),
+        var(--bg);
+      font-family:
+        "Hiragino Kaku Gothic ProN",
+        "Yu Gothic",
+        "Meiryo",
+        sans-serif;
+      line-height: 1.85;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .backpage {
+      text-align: right;
+    }
+    .backpage a {
+      color: inherit;
+    }
+    
+    .page {
+      width: min(920px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 42px 0 64px;
+    }
+
+    .hero {
+      text-align: center;
+      color: #efe7d1;
+      padding: 24px 14px 32px;
+    }
+
+    .hero-kicker {
+      margin: 0 0 8px;
+      font-size: 0.74rem;
+      letter-spacing: 0.26em;
+      opacity: 0.65;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.25rem, 7vw, 4.9rem);
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+      text-shadow: 0 4px 18px rgba(0,0,0,0.4);
+    }
+
+    .hero-logo {
+      display: block;
+      width: min(680px, 94%);
+      height: auto;
+      margin: 0 auto;
+    }
+
+    .paper {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(rgba(255,255,255,0.08), rgba(0,0,0,0.025)),
+        var(--paper);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px;
+      box-shadow: 0 18px 46px var(--shadow);
+    }
+
+    .paper::before,
+    .paper::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      inset: 0;
+    }
+
+    .paper::before {
+      opacity: 0.14;
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          rgba(74, 61, 42, 0.08) 0px,
+          rgba(74, 61, 42, 0.08) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+    }
+
+    .paper::after {
+      box-shadow: inset 0 0 55px rgba(82, 67, 43, 0.17);
+    }
+
+    .paper-inner {
+      position: relative;
+      z-index: 1;
+      padding: clamp(28px, 6vw, 64px);
+    }
+
+    .story {
+      max-width: 650px;
+      margin: 0 auto;
+      text-align: center;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: clamp(1rem, 2.3vw, 1.1rem);
+    }
+
+    .story p {
+      margin: 0 0 1.45em;
+    }
+
+    .story .ending-title {
+      margin-top: 2.2em;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+      font-weight: 500;
+      letter-spacing: 0.12em;
+    }
+
+    .divider {
+      width: min(320px, 70%);
+      height: 1px;
+      margin: 46px auto;
+      background: linear-gradient(to right, transparent, var(--line), transparent);
+    }
+
+    .section-title {
+      margin: 0 0 28px;
+      text-align: center;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: clamp(1.5rem, 4vw, 2.15rem);
+      letter-spacing: 0.08em;
+    }
+
+    .flavor {
+      color: var(--muted);
+      font-family: "Yomogi", cursive;
+      font-style: normal;
+      font-size: 1.05rem;
+      line-height: 1.8;
+    }
+
+    .footnote {
+      margin: 32px 0 0;
+      text-align: center;
+      color: rgba(239, 231, 209, 0.58);
+      font-size: 0.78rem;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100% - 18px, 920px);
+        padding-top: 24px;
+      }
+
+      .hero {
+        padding-top: 18px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .paper-inner {
+        padding: 30px 20px 38px;
+      }
+
+      .action-card,
+      .rule {
+        padding: 20px 18px;
+      }
+
+      .divider {
+        margin: 36px auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+
+    <header class="hero">
+      <p class="hero-kicker">A LITTLE SURVIVAL GAME</p>
+
+      <img class="hero-logo" src="./images/UI/title_logo.png" alt="STILL ALIVE, PROBABLY">
+    </header>
+
+    <article class="paper">
+      <div class="paper-inner">
+
+        <section class="story" aria-labelledby="story-heading">
+          <h2 id="story-heading" class="section-title">不思議な料理レシピ集</h2>
+
+          <div class="divider"></div>
+
+        </section>
+
+        <div class="divider"></div>
+
+        <div class="backpage"">
+          <a href="./more.html">戻る</a>
+        </div>
+      </div>
+    </article>
+
+    <p class="footnote">STILL ALIVE, PROBABLY</p>
+
+  </main>
+</body>
+</html>
