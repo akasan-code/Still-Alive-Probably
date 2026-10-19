@@ -210,6 +210,23 @@
       .divider {
         margin: 36px auto;
       }
+
+      .nav-menu {
+        width: 100%;
+        align-items: center;
+      }
+
+      .nav-item {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+      }
+
+      .nav-item a {
+          width: 100%;
+          max-width: 350px;
+          height: 100px;
+      }
     }
 
       /* レシピの並び（横並び・中央寄せ） */
@@ -231,11 +248,11 @@
           align-items: center;    /* 文字を上下中央に */
           justify-content: center; /* 文字を左右中央に */
           width: 500px;           /* イラストの横幅に合わせる */
-          height: 200px;           /* イラストの縦幅に合わせる */
+          height: 150px;           /* イラストの縦幅に合わせる */
           text-decoration: none;
-          color: #ffffff;         /* 文字色 */
+          color: #000000;         /* 文字色 */
           font-weight: bold;
-          font-size: 22px;
+          font-size: 18px;
           text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6); /* 文字の影 */
           
           background-image: url('./recipes/images/menu_bg.png'); 
@@ -254,7 +271,7 @@
       }
 
       .nav-menu .nav-item + .nav-item {
-          margin-top: -80px; /* ★ここの数値を大きくするほど、メニューの間隔が詰まる */
+          margin-top: -65px; /* ★ここの数値を大きくするほど、メニューの間隔が詰まる */
       }
   </style>
 </head>
