@@ -100,9 +100,15 @@
         linear-gradient(rgba(255,255,255,0.08), rgba(0,0,0,0.025)),
         var(--paper);
       background-image: url("https://akasan-code.github.io/Still-Alive-Probably/survival-game/images/events/scrapbook_base.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 5px;
       box-shadow: 0 18px 46px var(--shadow);
+      padding-left: 10%;
+      padding-right: 40px;
+      padding-bottom: 200px; 
     }
 
     .paper::before,
@@ -142,9 +148,16 @@
       font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
       font-size: clamp(1rem, 2.3vw, 1.1rem);
     }
+    .recipe-text {
+      max-width: 650px;
+      margin: 0 auto;
+      text-align: left;
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      font-size: clamp(1rem, 2.3vw, 1.1rem);
+    }
 
     .story p {
-      margin: 0 0 1.45em;
+      margin: 0 0 0.45em;
     }
 
     .story .ending-title {
@@ -158,16 +171,23 @@
     .divider {
       width: min(320px, 70%);
       height: 1px;
-      margin: 46px auto;
+      margin: 26px auto;
       background: linear-gradient(to right, transparent, var(--line), transparent);
     }
 
     .section-title {
-      margin: 0 0 28px;
+      margin: 0 0 20px;
       text-align: center;
       font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
       font-size: clamp(1.5rem, 4vw, 2.15rem);
       letter-spacing: 0.08em;
+    }
+
+    .recipe-img {
+      display: block;
+      width: min(320px, 60%);
+      height: auto;
+      margin: 0 auto;
     }
 
     .flavor {
@@ -255,9 +275,10 @@
 
           <div class="divider"></div>
 
-          <p class="story">作り方：蝶ベリーを一掴み採ります</p>
-          <p class="story">　　　　電気鍋に入れます（茎やヘタは取りましょう）</p>
-          <p class="story">　　　　待ちます</p>
+          <p class="story">作り方</p>
+          <p class="recipe-text">　　　　1.蝶ベリーを一掴み、採ります</p>
+          <p class="recipe-text">　　　　2.電気鍋に入れます（茎やヘタは取りましょう）</p>
+          <p class="recipe-text">　　　　3.待ちます</p>
 
           <div class="divider"></div>
 
